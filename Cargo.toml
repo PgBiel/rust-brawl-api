@@ -1,0 +1,9 @@
+[package]
+name = "brawl_api"
+version = "0.1.0"
+authors = ["PgBiel <9021226+pgbiel@users.noreply.github.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
