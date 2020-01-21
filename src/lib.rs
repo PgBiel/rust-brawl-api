@@ -1,8 +1,16 @@
 pub mod traits;
 
+pub mod constants;
+
+mod macros;
+
 pub mod model;
 
-pub use model::player::{Player, PlayerClub, BrawlerStat, StarPower};
+#[cfg(feature = "players")]
+pub use model::players::{Player, PlayerClub, BrawlerStat, StarPower};
+
+#[cfg(feature = "clubs")]
+pub use model::clubs::{Club, ClubMember, ClubMemberRole};
 
 pub mod error;
 

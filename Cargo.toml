@@ -1,9 +1,28 @@
 [package]
-name = "brawl_api"
+name = "brawl-api"
 version = "0.1.0"
+description = "A Rust implementation of the Brawl Stars API (https://developer.brawlstars.com/)."
 authors = ["PgBiel <9021226+pgbiel@users.noreply.github.com>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+serde_json = "1.0.44"
+reqwest = { version = "0.10", features = ["blocking", "json"] }
+async-trait = { version = "0.1.22", optional = true }
+
+[features]
+default = [
+    "players", "clubs",
+    "rankings", "brawlers",
+    "async",
+]
+
+players = []
+clubs = []
+rankings = []
+brawlers = []
+async = [
+    "async-trait"
+]
