@@ -1,7 +1,7 @@
 #[cfg(feature = "async")]
 use async_trait::async_trait;
 
-use crate::traits::{Fetchable, FetchFrom};
+use crate::traits::{PropFetchable, FetchFrom};
 use crate::error::Result;
 
 #[cfg(feature = "players")]
@@ -39,9 +39,10 @@ pub struct Club {
 }
 
 #[cfg_attr(feature = "async", async_trait)]
-impl<'a> Fetchable for Club {
+impl<'a> PropFetchable for Club {
     type Property = &'a str;
 
+    /// (Sync) Fetch a Club from its tag.
     fn fetch(tag: &'a str) -> Result<Club> {
         // TODO: Implement TagFetchable for Club (be able to fetch a club)
     }
@@ -49,6 +50,10 @@ impl<'a> Fetchable for Club {
     #[cfg(feature = "async")]
     async fn a_fetch(tag: &'a str) -> Result<Club> {
 
+    }
+
+    fn get_fetch_prop(&self) -> &'a str {
+        &*self.tag
     }
 }
 

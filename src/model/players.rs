@@ -5,7 +5,7 @@
 
 #[cfg(feature = "async")]
 use async_trait::async_trait;
-use crate::traits::{FetchFrom, Fetchable, Initializable};
+use crate::traits::{FetchFrom, PropFetchable, Initializable};
 use crate::error::{Result, Error};
 use crate::macros::b_api_concat;
 
@@ -117,7 +117,7 @@ impl Initializable for Player {
 }
 
 #[cfg_attr(feature = "async", async_trait)]
-impl<'a> Fetchable for Player {
+impl<'a> PropFetchable for Player {
     type Property = &'a str;
 
     /// (Sync) Fetches a Player through its tag.
@@ -129,6 +129,10 @@ impl<'a> Fetchable for Player {
     #[cfg(feature = "async")]
     async fn a_fetch(tag: &'a str) -> Result<Player> {
 
+    }
+
+    fn get_fetch_prop(&self) -> &'a str {
+        &*self.tag
     }
 }
 

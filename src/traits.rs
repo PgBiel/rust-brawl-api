@@ -12,15 +12,66 @@ pub trait Initializable {
 /// A trait representing a type whose instance can be fetched from the API using some property.
 /// This is usually the object's tag.
 #[cfg_attr(feature = "async", async_trait)]
-pub trait Fetchable: Sized {
+pub trait PropFetchable: Sized {
     type Property;
 
+    /// (Sync) Fetch and construct a new instance of this type.
     fn fetch(prop: Self::Property) -> Result<Self>;
 
+    /// (Async) Fetch and construct a new instance of this type.
     #[cfg(feature = "async")]
     async fn a_fetch(prop: Self::Property) -> Result<Self>;
+
+    /// Obtain the revelant property for fetching.
+    #[doc(hidden)]
+    fn get_fetch_prop(&self) -> Property;  // necessary for Refetchable blanket impl
+
+    // /// Fetches an object once again.
+    //    fn refetch(&self) -> Result<Self> {
+    //        Self::fetch()
+    //    }
 }
-// TODO: async equivalents & stuff
+
+/// A trait representing a type whose instance can be fetched again.
+/// Note that, thanks to [`PropFetchable::get_fetch_prop`], all types implementing
+/// [`PropFetchable`] also implement [`Refetchable`] due to a blanket implementation.
+///
+/// [`PropFetchable`]: ./traits/trait.PropFetchable.html
+/// [`PropFetchable`]: ./traits/trait.PropFetchable.html#method.get_fetch_prop
+#[cfg_attr(feature = "async", async_trait)]
+pub trait Refetchable: Sized {
+    /// (Sync) Causes this instance to be re-fetched (i.e., updated to latest Brawl Stars data).
+    fn refetch(self) -> Result<Self>;
+
+    /// (Async) Causes this instance to be re-fetched (i.e., updated to latest Brawl Stars data).
+    #[cfg(feature = "async")]
+    async fn a_refetch(self) -> Result<Self>;
+}
+
+impl<T> Refetchable for T
+    where T: PropFetchable + Sized {
+    fn refetch(self) -> Result<Self> {
+        Self::fetch(self.get_fetch_prop())
+    }
+
+    #[cfg(feature = "async")]
+    async fn a_refetch(self) -> Result<Self> {
+        Self::a_fetch(self.get_fetch_prop()).await
+    }
+}
+
+// vvvvv can't access fields from traits; perhaps do something about this?
+//pub trait TagFetchable: for<'a> Fetchable<Property = &'a str> + Sized {}
+//
+//impl<'a, T: Fetchable<Property = &'a str>> TagFetchable for T {}
+//
+//impl<'a> Refetchable for TagFetchable {
+//    fn refetch(self) -> Result<Self> {
+//        let new_res = Self::fetch(self.tag);
+//
+//    }
+//}
+
 
 /// A trait indicating that another type can be converted into this one by fetching from the API.
 /// Note that, thanks to a blanket implementation, implementing this implies implementing
