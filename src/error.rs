@@ -95,18 +95,18 @@ impl StdError for Error {
     }
 }
 
-impl Error {
-    #[doc(hidden)]
-    pub fn from_response(response: Response) -> Error {
-        let status = response.status();
-        let value = ::serde_json::from_reader(response).ok();
-        if status == ::hyper::status::StatusCode::TooManyRequests {
-            if let Some(JsonValue::Object(ref map)) = value {
-                if let Some(delay) = map.get("retry_after").and_then(|v| v.as_u64()) {
-                    return Error::RateLimited(delay)
-                }
-            }
-        }
-        Error::Status(status, value)
-    }
-}
+//impl Error {
+//    #[doc(hidden)]
+//    pub fn from_response(response: Response) -> Error {
+//        let status = response.status();
+//        let value = ::serde_json::from_reader(response).ok();
+//        if status == ::hyper::status::StatusCode::TooManyRequests {
+//            if let Some(JsonValue::Object(ref map)) = value {
+//                if let Some(delay) = map.get("retry_after").and_then(|v| v.as_u64()) {
+//                    return Error::RateLimited(delay)
+//                }
+//            }
+//        }
+//        Error::Status(status, value)
+//    }
+//}

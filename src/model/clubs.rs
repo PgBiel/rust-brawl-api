@@ -1,11 +1,18 @@
 #[cfg(feature = "async")]
 use async_trait::async_trait;
 
-use crate::traits::{PropFetchable, FetchFrom};
+use crate::traits::{PropFetchable, FetchFrom, Initializable, TagFetchable};
 use crate::error::Result;
 
 #[cfg(feature = "players")]
-use crate::model::players::PlayerClub;
+use super::players::PlayerClub;
+
+/// The type of club (whether it's open, invite-only, or closed).
+pub enum ClubType {
+    Open,
+    InviteOnly,
+    Closed,
+}
 
 /// A struct representing a Brawl Stars club, with all of its data.
 /// Use [`Club::fetch`] to fetch one based on tag.
@@ -14,14 +21,14 @@ use crate::model::players::PlayerClub;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Club {
 
-    /// The club's tag.
+    /// The club's tag. **Note: this includes the initial '#'.**
     pub tag: String,
 
     /// The club's name.
     pub name: String,
 
     /// The club's description.
-    pub description: String,
+    pub description: Option<String>,
 
     /// The club's trophies.
     pub trophies: usize,
@@ -34,25 +41,42 @@ pub struct Club {
     /// [`ClubMember`]: ./struct.ClubMember.html
     pub members: Vec<ClubMember>,
 
-    /// The type of club.
-    pub club_type: String
+    /// The type of club (see [`ClubType`] docs).
+    ///
+    /// [`ClubType`]: ./enum.ClubType.html
+    pub club_type: ClubType
 }
 
-#[cfg_attr(feature = "async", async_trait)]
-impl<'a> PropFetchable for Club {
-    type Property = &'a str;
+impl Initializable for Club {
 
+    /// Initializes a new Club instance, with default values.
+    fn new() -> Club {
+        Club {
+            tag: String::from(""),
+            name: String::from(""),
+            description: None,
+            trophies: 0,
+            required_trophies: 0,
+            members: vec![],
+            club_type: ClubType::Open,
+        }
+    }
+}
+
+
+#[cfg_attr(feature = "async", async_trait)]
+impl TagFetchable for Club {
     /// (Sync) Fetch a Club from its tag.
-    fn fetch(tag: &'a str) -> Result<Club> {
+    fn fetch(tag: &str) -> Result<Club> {
         // TODO: Implement TagFetchable for Club (be able to fetch a club)
     }
 
     #[cfg(feature = "async")]
-    async fn a_fetch(tag: &'a str) -> Result<Club> {
+    async fn a_fetch(tag: &str) -> Result<Club> {
 
     }
 
-    fn get_fetch_prop(&self) -> &'a str {
+    fn get_fetch_prop(&self) -> &str {
         &*self.tag
     }
 }
@@ -104,7 +128,19 @@ pub struct ClubMember {
 
     /// The member's name color, as an integer (Default is 0xffffff = 16777215 - this is used
     /// when the data is not available).
-    pub name_color: String
+    pub name_color: usize
+}
+
+impl Initializable for ClubMember {
+    fn new() -> ClubMember {
+        ClubMember {
+            tag: String::from(""),
+            name: String::from(""),
+            trophies: 0,
+            role: ClubMemberRole::Member,
+            name_color: 0xffffff
+        }
+    }
 }
 
 // TODO: clubs/<tag>/members endpoint

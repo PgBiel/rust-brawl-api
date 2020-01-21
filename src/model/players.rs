@@ -5,12 +5,11 @@
 
 #[cfg(feature = "async")]
 use async_trait::async_trait;
-use crate::traits::{FetchFrom, PropFetchable, Initializable};
+use crate::traits::{FetchFrom, PropFetchable, Initializable, TagFetchable};
 use crate::error::{Result, Error};
-use crate::macros::b_api_concat;
 
 #[cfg(feature = "clubs")]
-use crate::model::clubs::ClubMember;
+use super::clubs::ClubMember;
 
 /// A struct representing a Brawl Stars player, with all of its data.
 /// Use [`Player::fetch`] to fetch one based on tag.
@@ -30,7 +29,7 @@ pub struct Player {
     /// Amount of 3v3 victories the Player has earned.
     pub tvt_victories: usize,
 
-    /// The player's tag.
+    /// The player's tag. **Note: this includes the initial '#'.**
     pub tag: String,
 
     /// The player's name.
@@ -117,21 +116,20 @@ impl Initializable for Player {
 }
 
 #[cfg_attr(feature = "async", async_trait)]
-impl<'a> PropFetchable for Player {
-    type Property = &'a str;
-
+impl TagFetchable for Player {
     /// (Sync) Fetches a Player through its tag.
-    fn fetch(tag: &'a str) -> Result<Player> {
+    fn fetch(tag: &str) -> Result<Player> {
         // TODO: Implement TagFetchable for Player (be able to fetch a player)
     }
 
     /// (Async) Fetches a player through its tag.
     #[cfg(feature = "async")]
-    async fn a_fetch(tag: &'a str) -> Result<Player> {
+    async fn a_fetch(tag: &str) -> Result<Player> {
 
     }
 
-    fn get_fetch_prop(&self) -> &'a str {
+    #[inline]
+    fn get_fetch_prop(&self) -> &str {
         &*self.tag
     }
 }
@@ -168,6 +166,17 @@ pub struct PlayerClub {
     pub name: String
 }
 
+impl Initializable for PlayerClub {
+
+    /// Initializes a new PlayerClub instance, with default values.
+    fn new() -> PlayerClub {
+        PlayerClub {
+            tag: String::from(""),
+            name: String::from("")
+        }
+    }
+}
+
 /// A struct containing information about a player's brawler (see [`Player.brawlers`]).
 ///
 /// [`Player.brawlers`]: ./struct.Player.html#structfield.brawlers
@@ -199,6 +208,22 @@ pub struct BrawlerStat {
     pub name: String,
 }
 
+impl Initializable for BrawlerStat {
+
+    /// Initializes a new BrawlerStat instance, with default values.
+    fn new() -> BrawlerStat {
+        BrawlerStat {
+            star_powers: vec![],
+            id: 0,
+            rank: 1,
+            trophies: 0,
+            highest_trophies: 0,
+            power: 1,
+            name: String::from(""),
+        }
+    }
+}
+
 /// A struct representing a brawler's star power.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StarPower {
@@ -208,4 +233,15 @@ pub struct StarPower {
 
     /// The star power's id (an arbitrary number).
     pub id: isize
+}
+
+impl Initializable for StarPower {
+
+    /// Initializes a new StarPower instance, with default values.
+    fn new() -> StarPower {
+        StarPower {
+            name: String::from(""),
+            id: 0
+        }
+    }
 }

@@ -2,6 +2,8 @@ pub mod traits;
 
 pub mod constants;
 
+pub mod http;
+
 mod macros;
 
 pub mod model;
