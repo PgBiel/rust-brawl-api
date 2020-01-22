@@ -1,7 +1,8 @@
+use serde::Deserialize;
+use std::se
+
 //! Models for the 'players/' API endpoint.
 //! Included by the feature 'players'; removing that feature will disable the usage of this module.
-
-#![warn(missing_docs)]
 
 #[cfg(feature = "async")]
 use async_trait::async_trait;
@@ -10,12 +11,16 @@ use crate::error::{Result, Error};
 
 #[cfg(feature = "clubs")]
 use super::clubs::ClubMember;
+use crate::http::Client;
+use crate::http::routes::Route;
+use crate::util::auto_hashtag;
 
 /// A struct representing a Brawl Stars player, with all of its data.
 /// Use [`Player::fetch`] to fetch one based on tag.
 ///
 /// [`Player::fetch`]: ./struct.Player.html#method.fetch
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Player {
 
     /// The club the Player is in (as a [`PlayerClub`] instance), or None if none.
@@ -27,6 +32,7 @@ pub struct Player {
     pub is_qualified_from_championship_challenge: bool,
 
     /// Amount of 3v3 victories the Player has earned.
+    #[serde(rename = "3v3Victories")]
     pub tvt_victories: usize,
 
     /// The player's tag. **Note: this includes the initial '#'.**
@@ -70,6 +76,7 @@ pub struct Player {
 
     /// The player's name color, as an integer (Default is 0xffffff = 16777215 - this is used
     /// when the data is not available).
+    #[serde(deserialize_with = "String::parse")]
     pub name_color: usize,
 }
 
@@ -117,14 +124,17 @@ impl Initializable for Player {
 
 #[cfg_attr(feature = "async", async_trait)]
 impl TagFetchable for Player {
+
     /// (Sync) Fetches a Player through its tag.
-    fn fetch(tag: &str) -> Result<Player> {
-        // TODO: Implement TagFetchable for Player (be able to fetch a player)
+    fn fetch(client: &Client, tag: &str) -> Result<Player> {
+        let route = Route::Player(auto_hashtag(tag));
+        let mut request_b = client.build_endpoint_get(&*route.to_url_str())?;
+        let res
     }
 
     /// (Async) Fetches a player through its tag.
     #[cfg(feature = "async")]
-    async fn a_fetch(tag: &str) -> Result<Player> {
+    async fn a_fetch(client: &Client, tag: &str) -> Result<Player> {
 
     }
 
@@ -156,7 +166,7 @@ impl FetchFrom<ClubMember> for Player {
 ///
 /// [`Player.club`]: ./struct.Player.html#structfield.club
 /// [`Club::fetch_from`]: ../clubs/struct.Club.html#method.fetch_from
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserializable)]
 pub struct PlayerClub {
 
     /// The club's tag.

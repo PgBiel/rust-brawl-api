@@ -2,55 +2,68 @@ use reqwest::blocking::{
     Client as ReqClient, ClientBuilder as ReqClientBuilder,
     RequestBuilder
 };
+
+#[cfg(feature = "async")]
 use reqwest::{
     Client as AReqClient, ClientBuilder as AReqClientBuilder,
     RequestBuilder as ARequestBuilder
 };
+
 use crate::constants::USER_AGENT as BRAWL_USER_AGENT;
 use crate::http::request::Request;
 use crate::error::Result;
 
 pub struct Client {
     pub auth_key: String,
-    inner: ReqClient,
+    pub(crate) inner: ReqClient,
 
     #[cfg(feature = "async")]
-    a_inner: AReqClient,
+    pub(crate) a_inner: AReqClient,
 }
 
 impl Client {
-    fn new(auth_key: &str) -> Client {
-        let mut inner_b: ReqClientBuilder = ReqClient::builder();
-        let mut a_inner_b: AReqClientBuilder = AReqClient::builder();
+    /// Creates a new Client with a given API auth key.
+    pub fn new(auth_key: &str) -> Client {
+        let mut inner_b: ReqClientBuilder = ReqClient::builder().user_agent(BRAWL_USER_AGENT);
 
-        inner_b.user_agent(BRAWL_USER_AGENT);
-        a_inner_b.user_agent(BRAWL_USER_AGENT);
+        #[cfg(feature = "async")]
+        let mut a_inner_b: AReqClientBuilder = AReqClient::builder().user_agent(BRAWL_USER_AGENT);
 
         Client {
             auth_key: String::from(auth_key),
             inner: inner_b.build().unwrap(),
+
+            #[cfg(feature = "async")]
             a_inner: a_inner_b.build().unwrap(),
         }
     }
 
-    fn inner(&self) -> &ReqClient { &self.inner }
-    fn a_inner(&self) -> &AReqClient { &self.a_inner }
-    
+    pub fn inner(&self) -> &ReqClient { &self.inner }
+    pub fn inner_mut(&mut self) -> &mut ReqClient {&mut self.inner}
+
+    #[cfg(feature = "async")]
+    pub fn a_inner(&self) -> &AReqClient { &self.a_inner }
+
+    #[cfg(feature = "async")]
+    pub fn a_inner_mut(&mut self) -> &mut AReqClient { &mut self.a_inner }
+
     /// Creates a Request instance for one specific endpoint and returns it.
-    fn endpoint_request(&self, endpoint: &str) -> Request<'_> {
+    pub fn endpoint_request(&self, endpoint: &str) -> Request<'_> {
         Request::<'_>::new()
     }
 
-    /// (Sync) Creates a Request instance for one specific endpoint and calls [`Request::build`]
-    /// on the newly-made instance, returning a (blocking) `RequestBuilder`.
-    fn build_endpoint_request(&self, endpoint: &str) -> Result<RequestBuilder> {
+    /// (For sync usage) Creates a Request instance for one specific endpoint and calls
+    /// [`Request::build`] on the newly-made instance, returning a (blocking) `RequestBuilder`.
+    /// (GET)
+    pub fn build_endpoint_get(&self, endpoint: &str) -> Result<RequestBuilder> {
         self.endpoint_request(endpoint).build(&self)
     }
 
-    /// (Async) Creates a Request instance for one specific endpoint and calls [`Request::build`]
-    /// on the newly-made instance, returning a (non-blocking) `RequestBuilder`.
+    /// (For async usage) Creates a Request instance for one specific endpoint and calls
+    /// [`Request::build`] on the newly-made instance, returning a (non-blocking) `RequestBuilder`.
+    /// (GET)
     #[cfg(feature = "async")]
-    fn a_build_endpoint_request(&self, endpoint: &str) -> Result<ARequestBuilder> {
+    pub fn a_build_endpoint_get(&self, endpoint: &str) -> Result<ARequestBuilder> {
         self.endpoint_request(endpoint).a_build(&self)
     }
 }

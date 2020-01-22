@@ -2,6 +2,7 @@ use crate::error::{Result, Error};
 
 #[cfg(feature = "async")]
 use async_trait::async_trait;
+use crate::http::Client;
 
 /// A trait representing a struct/enum which can generate an instance with default values
 /// for its properties.
@@ -16,11 +17,11 @@ pub trait PropFetchable: Sized {
     type Property;
 
     /// (Sync) Fetch and construct a new instance of this type.
-    fn fetch(prop: &Self::Property) -> Result<Self>;
+    fn fetch(client: &Client, prop: &Self::Property) -> Result<Self>;
 
     /// (Async) Fetch and construct a new instance of this type.
     #[cfg(feature = "async")]
-    async fn a_fetch(prop: &Self::Property) -> Result<Self>;
+    async fn a_fetch(client: &Client, prop: &Self::Property) -> Result<Self>;
 
     /// Obtain the revelant property for fetching.
     #[doc(hidden)]
@@ -37,11 +38,11 @@ pub trait PropFetchable: Sized {
 #[cfg_attr(feature = "async", async_trait)]
 pub trait TagFetchable: Sized {
     /// (Sync) Fetch and construct a new instance of this type.
-    fn fetch(prop: &str) -> Result<Self>;
+    fn fetch(client: &Client, prop: &str) -> Result<Self>;
 
     /// (Async) Fetch and construct a new instance of this type.
     #[cfg(feature = "async")]
-    async fn a_fetch(prop: &str) -> Result<Self>;
+    async fn a_fetch(client: &Client, prop: &str) -> Result<Self>;
 
     /// Obtain the revelant property for fetching.
     #[doc(hidden)]
@@ -62,23 +63,23 @@ pub trait TagFetchable: Sized {
 #[cfg_attr(feature = "async", async_trait)]
 pub trait Refetchable: Sized {
     /// (Sync) Causes this instance to be re-fetched (i.e., updated to latest Brawl Stars data).
-    fn refetch(self) -> Result<Self>;
+    fn refetch(self, client: &Client) -> Result<Self>;
 
     /// (Async) Causes this instance to be re-fetched (i.e., updated to latest Brawl Stars data).
     #[cfg(feature = "async")]
-    async fn a_refetch(self) -> Result<Self>;
+    async fn a_refetch(self, client: &Client) -> Result<Self>;
 }
 
 #[cfg_attr(feature = "async", async_trait)]
 impl<T> Refetchable for T
     where T: PropFetchable + Sized {
-    fn refetch(self) -> Result<Self> {
-        Self::fetch(&self.get_fetch_prop())
+    fn refetch(self, client: &Client) -> Result<Self> {
+        Self::fetch(client, &self.get_fetch_prop())
     }
 
     #[cfg(feature = "async")]
-    async fn a_refetch(self) -> Result<Self> {
-        Self::a_fetch(&self.get_fetch_prop()).await
+    async fn a_refetch(self, client: &Client) -> Result<Self> {
+        Self::a_fetch(client, &self.get_fetch_prop()).await
     }
 }
 
@@ -103,10 +104,10 @@ impl<T> Refetchable for T
 #[cfg_attr(feature = "async", async_trait)]
 pub trait FetchFrom<T>: Sized {
     /// Performs the conversion by fetching the equivalent.
-    fn fetch_from(value: T) -> Result<Self>;
+    fn fetch_from(value: T, client: &Client) -> Result<Self>;
 
     #[cfg(feature = "async")]
-    async fn a_fetch_from(value: T) -> Result<Self>;
+    async fn a_fetch_from(value: T, client: &Client) -> Result<Self>;
 }
 
 /// A trait indicating that this type can be converted into another by fetching from the API.
@@ -116,31 +117,31 @@ pub trait FetchFrom<T>: Sized {
 /// [`FetchFrom`]: ./trait.FetchFrom.html
 #[cfg_attr(feature = "async", async_trait)]
 pub trait FetchInto<T>: Sized {
-    fn fetch_into(self) -> Result<T>;
+    fn fetch_into(self, client: &Client) -> Result<T>;
 
     #[cfg(feature = "async")]
-    async fn a_fetch_into(self) -> Result<T>;
+    async fn a_fetch_into(self, client: &Client) -> Result<T>;
 }
 
 // FetchFrom implies FetchInto
 #[cfg_attr(feature = "async", async_trait)]
 impl<T, U> FetchInto<U> for T where U: FetchFrom<T>
 {
-    fn fetch_into(self) -> Result<U> {
-        U::fetch_from(self)
+    fn fetch_into(self, client: &Client) -> Result<U> {
+        U::fetch_from(self, client)
     }
 
     #[cfg(feature = "async")]
-    async fn a_fetch_into(self) -> Result<U> {
-        U::a_fetch_from(self).await
+    async fn a_fetch_into(self, client: &Client) -> Result<U> {
+        U::a_fetch_from(self, client).await
     }
 }
 
 // FetchFrom (and thus FetchInto) is reflexive
 #[cfg_attr(feature = "async", async_trait)]
 impl<T> FetchFrom<T> for T {
-    fn fetch_from(t: T) -> Result<T> { Ok(t) }
+    fn fetch_from(t: T, _: &Client) -> Result<T> { Ok(t) }
 
     #[cfg(feature = "async")]
-    async fn a_fetch_from(t: T) -> Result<Self> { Ok(t) }
+    async fn a_fetch_from(t: T, _: &Client) -> Result<Self> { Ok(t) }
 }
