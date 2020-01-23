@@ -3,7 +3,7 @@ use async_trait::async_trait;
 
 use serde::{self, Serialize, Deserialize};
 
-use crate::traits::{PropFetchable, FetchFrom, Initializable, GetFetchProp, PropRouteable};
+use crate::traits::{PropFetchable, FetchFrom, GetFetchProp, PropRouteable};
 use crate::error::Result;
 
 #[cfg(feature = "players")]
@@ -75,10 +75,11 @@ fn one_default_usize() -> usize { 1 }
 fn false_default() -> bool { false }
 fn oxffffff_default_usize() -> usize { 0xffffff }
 
-impl Initializable for Club {
+impl Default for Club {
+    
 
     /// Initializes a new Club instance, with default values.
-    fn new() -> Club {
+    fn default() -> Club {
         Club {
             tag: String::from(""),
             name: String::from(""),
@@ -107,12 +108,12 @@ impl PropRouteable for Club {
 #[cfg(feature = "players")]
 impl FetchFrom<PlayerClub> for Club {
     fn fetch_from(client: &Client, p_club: PlayerClub) -> Result<Club> {
-        Club::fetch(client, &p_club.tag)
+        Club::fetch(client, p_club.tag.clone())
     }
 
     #[cfg(feature = "async")]
     async fn a_fetch_from(client: &Client, p_club: PlayerClub) -> Result<Club> {
-        Club::a_fetch(client, &p_club.tag).await
+        Club::a_fetch(client, p_club.tag.clone()).await
     }
 }
 
@@ -167,8 +168,9 @@ pub struct ClubMember {
     pub name_color: usize
 }
 
-impl Initializable for ClubMember {
-    fn new() -> ClubMember {
+impl Default for ClubMember {
+    
+    fn default() -> ClubMember {
         ClubMember {
             tag: String::from(""),
             name: String::from(""),

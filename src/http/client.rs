@@ -49,7 +49,7 @@ impl Client {
 
     /// Creates a Request instance for one specific endpoint and returns it.
     pub fn endpoint_request(&self, endpoint: &str) -> Request<'_> {
-        Request::<'_>::new()
+        Request::<'_>::default()
     }
 
     /// (For sync usage) Creates a Request instance for one specific endpoint and calls

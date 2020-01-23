@@ -1,20 +1,19 @@
 use crate::error::{Result, Error};
 
+use std::error::Error as StdError;
+
+use serde_json::Error as JsonError;
+
 #[cfg(feature = "async")]
 use async_trait::async_trait;
 use crate::http::Client;
 use serde::de::DeserializeOwned;
 use crate::util::fetch_route;
 
-/// A trait representing a struct/enum which can generate an instance with default values
-/// for its properties on `Type::new()`.
-pub trait Initializable {
-    fn new() -> Self;
-}
-
-impl<T: Initializable> Default for T {
-    fn default() -> T { T::new() }  // that's the whole point of it, after all
-}
+#[cfg(feature = "async")]
+use crate::util::a_fetch_route;
+use crate::http::routes::Route;
+use std::pin::Pin;
 
 /// A trait representing a type with a property used to be fetched.
 /// This property must be returned by the `get_fetch_prop` function.
@@ -34,11 +33,11 @@ pub trait PropFetchable: Sized {
     type Property;
 
     /// (Sync) Fetch and construct a new instance of this type.
-    fn fetch(client: &Client, prop: &Self::Property) -> Result<Self>;
+    fn fetch(client: &Client, prop: Self::Property) -> Result<Self>;
 
     /// (Async) Fetch and construct a new instance of this type.
     #[cfg(feature = "async")]
-    async fn a_fetch(client: &Client, prop: &Self::Property) -> Result<Self>;
+    async fn a_fetch(client: &Client, prop: Self::Property) -> Result<Self>;
 
     // /// Fetches an object once again.
     //    fn refetch(&self) -> Result<Self> {
@@ -58,23 +57,36 @@ pub trait PropRouteable: Sized {
 
     /// Obtain the relevant route for fetching, given the property.
     #[doc(hidden)]
-    fn get_route(prop: &Self::Property) -> Self::Property;
+    fn get_route(prop: &Self::Property) -> Route;
 }
 
 #[cfg_attr(feature = "async", async_trait)]
-impl<T, U> PropFetchable for T
-    where T: PropRouteable<Property=U> + GetFetchProp + DeserializeOwned + Sized {
+impl<'a, T, U> PropFetchable for T
+    where T: PropRouteable<Property=U> + GetFetchProp + DeserializeOwned + Sized + Sync,
+    U: Sync + Send {
     type Property = U;
 
-    fn fetch(client: &Client, prop: &Self::Property) -> Result<T> {
-        let route = Self::get_route(prop);
-        fetch_route::<T>(client, route)
+    /// (Sync) Fetches this instance.
+    fn fetch(client: &Client, prop: Self::Property) -> Result<T> {
+        let route = Self::get_route(&prop);
+        fetch_route::<T>(client, &route)
     }
 
+    /// (Async) Fetches this instance.
     #[cfg(feature="async")]
-    async fn a_fetch(client: &Client, prop: &Self::Property) -> Result<T> {
-        let route = Self::get_route(prop);
-        // TODO: a_fetch_route::<T>(client, route)
+    fn a_fetch<'a>(
+        client: &Client, prop: Self::Property,
+    ) -> Pin<Box<dyn std::future::Future<Output = ()> + Send + 'a>>
+        where
+            Self: Sync + 'a,
+    {
+        async fn a_fetch<P, S>(client: &Client, prop: S::Property) -> Result<P>
+            where S: PropRouteable<Property=U> + GetFetchProp + DeserializeOwned + Sized + Sync {
+            let route = S::get_route(&prop);
+            a_fetch_route::<P>(client, &route).await
+        }
+
+        Box::pin(a_fetch::<T, T>(client, prop))
     }
 }
 
@@ -95,15 +107,16 @@ pub trait Refetchable: Sized {
 }
 
 #[cfg_attr(feature = "async", async_trait)]
-impl<T> Refetchable for T
-    where T: GetFetchProp + PropFetchable + Sized {
+impl<T, U> Refetchable for T
+    where T: GetFetchProp<Property=U> + PropFetchable<Property=U> + Sized + Send + Sync,
+    U: Sync + Clone {
     fn refetch(self, client: &Client) -> Result<Self> {
-        Self::fetch(client, &self.get_fetch_prop())
+        Self::fetch(client, (*self.get_fetch_prop()).clone())
     }
 
     #[cfg(feature = "async")]
     async fn a_refetch(self, client: &Client) -> Result<Self> {
-        Self::a_fetch(client, &self.get_fetch_prop()).await
+        Self::a_fetch(client, (*self.get_fetch_prop()).clone()).await
     }
 }
 
@@ -128,10 +141,10 @@ impl<T> Refetchable for T
 #[cfg_attr(feature = "async", async_trait)]
 pub trait FetchFrom<T>: Sized {
     /// Performs the conversion by fetching the equivalent.
-    fn fetch_from(value: T, client: &Client) -> Result<Self>;
+    fn fetch_from(client: &Client, value: T) -> Result<Self>;
 
     #[cfg(feature = "async")]
-    async fn a_fetch_from(value: T, client: &Client) -> Result<Self>;
+    async fn a_fetch_from(client: &Client, value: T) -> Result<Self>;
 }
 
 /// A trait indicating that this type can be converted into another by fetching from the API.
@@ -152,20 +165,20 @@ pub trait FetchInto<T>: Sized {
 impl<T, U> FetchInto<U> for T where U: FetchFrom<T>
 {
     fn fetch_into(self, client: &Client) -> Result<U> {
-        U::fetch_from(self, client)
+        U::fetch_from(client, self)
     }
 
     #[cfg(feature = "async")]
     async fn a_fetch_into(self, client: &Client) -> Result<U> {
-        U::a_fetch_from(self, client).await
+        U::a_fetch_from(client, self).await
     }
 }
 
 // FetchFrom (and thus FetchInto) is reflexive
 #[cfg_attr(feature = "async", async_trait)]
 impl<T> FetchFrom<T> for T {
-    fn fetch_from(t: T, _: &Client) -> Result<T> { Ok(t) }
+    fn fetch_from(_: &Client, t: T) -> Result<T> { Ok(t) }
 
     #[cfg(feature = "async")]
-    async fn a_fetch_from(t: T, _: &Client) -> Result<Self> { Ok(t) }
+    async fn a_fetch_from(_: &Client, t: T) -> Result<Self> { Ok(t) }
 }

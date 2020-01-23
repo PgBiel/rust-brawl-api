@@ -14,7 +14,7 @@ use reqwest::{
 #[cfg(feature = "async")]
 use async_trait::async_trait;
 
-use crate::traits::{FetchFrom, PropFetchable, Initializable, GetFetchProp, PropRouteable};
+use crate::traits::{FetchFrom, PropFetchable, GetFetchProp, PropRouteable};
 use crate::error::{Result, Error};
 
 #[cfg(feature = "clubs")]
@@ -110,10 +110,10 @@ fn one_default_usize() -> usize { 1 }
 fn false_default() -> bool { false }
 fn oxffffff_default_usize() -> usize { 0xffffff }
 
-impl Initializable for Player {
-
+impl Default for Player {
+    
     /// Initializes a Player instance with default values for each field.
-    fn new() -> Player {
+    fn default() -> Player {
         Player {
             club: None,
 
@@ -168,12 +168,12 @@ impl PropRouteable for Player {
 #[cfg(feature = "clubs")]
 impl FetchFrom<ClubMember> for Player {
     fn fetch_from(client: &Client, member: ClubMember) -> Result<Player> {
-        Player::fetch(client, &member.tag)
+        Player::fetch(client, member.tag.clone())
     }
 
     #[cfg(feature = "async")]
     async fn a_fetch_from(client: &Client, member: ClubMember) -> Result<Player> {
-        Player::a_fetch(client, &member.tag).await
+        Player::a_fetch(client, member.tag.clone()).await
     }
 }
 
@@ -198,10 +198,10 @@ pub struct PlayerClub {
     pub name: String
 }
 
-impl Initializable for PlayerClub {
-
+impl Default for PlayerClub {
+    
     /// Initializes a new PlayerClub instance, with default values.
-    fn new() -> PlayerClub {
+    fn default() -> PlayerClub {
         PlayerClub {
             tag: String::from(""),
             name: String::from("")
@@ -248,10 +248,10 @@ pub struct BrawlerStat {
     pub name: String,
 }
 
-impl Initializable for BrawlerStat {
-
+impl Default for BrawlerStat {
+    
     /// Initializes a new BrawlerStat instance, with default values.
-    fn new() -> BrawlerStat {
+    fn default() -> BrawlerStat {
         BrawlerStat {
             star_powers: vec![],
             id: 0,
@@ -277,10 +277,10 @@ pub struct StarPower {
     pub id: isize
 }
 
-impl Initializable for StarPower {
-
+impl Default for StarPower {
+    
     /// Initializes a new StarPower instance, with default values.
-    fn new() -> StarPower {
+    fn default() -> StarPower {
         StarPower {
             name: String::from(""),
             id: 0

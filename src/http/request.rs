@@ -15,7 +15,6 @@ use reqwest::{
     Method,
 };
 use crate::error::{Result, Error};
-use crate::traits::Initializable;
 use crate::http::Client;
 use crate::constants::USER_AGENT as B_API_USER_AGENT;
 use crate::map_build;
@@ -37,8 +36,8 @@ pub struct Request<'a> {
     pub method: Method,
 }
 
-impl<'a> Initializable for Request<'a> {
-    fn new() -> Request<'a> {
+impl<'a> Default for Request<'a> {
+    fn default() -> Request<'a> {
         Request {
             body: None,
             headers: None,

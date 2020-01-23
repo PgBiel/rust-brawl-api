@@ -11,7 +11,6 @@ use reqwest::{
 };
 use std::fmt::{Formatter, Display};
 use crate::util::JsonMap;
-use crate::traits::Initializable;
 use std::convert::TryInto;
 
 /// Represents a `brawl-api` Result type.
@@ -92,8 +91,8 @@ pub struct APIError {
     pub detail: Option<JsonMap>,
 }
 
-impl Initializable for APIError {
-    fn new() -> APIError {
+impl Default for APIError {
+    fn default() -> APIError {
         APIError {
             reason: String::from(""),
             message: None,
@@ -193,7 +192,7 @@ impl Error {
             None => serde_json::from_reader(response).ok()
         };
 
-        let headers: HeaderMap = response.headers();
+        let headers: &HeaderMap = response.headers();
         let reset_header = headers.get("x-ratelimit-reset");
         if let Some(reset_header) = reset_header {  // ratelimited
             let reset_header = reset_header.to_str();
@@ -224,5 +223,51 @@ impl Error {
         };
 
         Error::Status(status, api_error, value)
-    }  // TODO: a_from_response
+    }
+
+    /// Obtain an Error from a Response (non-blocking). Optionally specify a pre-parsed JsonValue
+    /// for the body, otherwise that parsing will be done inside this function.
+    #[doc(hidden)]
+    #[cfg(feature = "async")]
+    pub(crate) async fn a_from_response(response: AResponse, value: Option<JsonValue>) -> Error {
+        let status = response.status();
+        let value: Option<JsonValue> = match value {
+            Some(val) => Some(val),
+            None => response.json().await.ok()
+        };
+
+        let headers: &HeaderMap = response.headers();
+        let reset_header = headers.get("x-ratelimit-reset");
+        if let Some(reset_header) = reset_header {  // ratelimited
+            let reset_header = reset_header.to_str();
+            if let Ok(reset) = reset_header {
+                return Error::Ratelimited {
+                    limit: match headers.get("x-ratelimit-limit") {
+                        Some(lim_header) => lim_header.to_str().ok().and_then(
+                            |s| { s.parse().ok() }
+                        ),
+                        None => None,
+                    },
+
+                    remaining: match headers.get("x-ratelimit-remaining") {
+                        Some(rem_header) => rem_header.to_str().ok().and_then(
+                            |s| { s.parse().ok() }
+                        ),
+                        None => None,
+                    },
+
+                    time_until_reset: Some(String::from(reset)),
+                }
+            }
+        }
+
+        let api_error: Option<APIError> = match value {
+            Some(ref val) => serde_json::from_value(val.clone()).ok(),
+            None => None,
+        };
+
+        Error::Status(status, api_error, value)
+    }
+
+
 }
