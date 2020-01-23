@@ -112,20 +112,12 @@ impl<'a> Request<'a> {
             format!("Bearer {}", key)
         };
 
-        let mut headers: HeaderMap<HeaderValue> = map_build!{
-            HeaderMap::with_capacity(3);
-
-            USER_AGENT => HeaderValue::from_static(&B_API_USER_AGENT),
-            AUTHORIZATION => HeaderValue::from_str(&key).map_err(Error::Authorization)?,
-            CONTENT_TYPE => HeaderValue::from_static(&"application/json"),
-        };
-
-//        let mut headers = HeaderMap::with_capacity(3);
-//        headers.insert(USER_AGENT, HeaderValue::from_static(&B_API_USER_AGENT));
-//        headers.insert(AUTHORIZATION,
-//                       HeaderValue::from_str(&key).map_err(Error::Authorization)?);
-//        headers.insert(CONTENT_TYPE, HeaderValue::from_static(&"application/json"));
-        // headers.insert(CONTENT_LENGTH, HeaderValue::from_static(&"0"));
+        let mut headers = HeaderMap::with_capacity(3);
+        headers.insert(USER_AGENT, HeaderValue::from_static(&B_API_USER_AGENT));
+        headers.insert(AUTHORIZATION,
+                       HeaderValue::from_str(&key).map_err(Error::Authorization)?);
+        headers.insert(CONTENT_TYPE, HeaderValue::from_static(&"application/json"));
+        headers.insert(CONTENT_LENGTH, HeaderValue::from_static(&"0"));
 
         if let Some(ref r_headers) = r_headers {
             headers.extend(r_headers.clone());

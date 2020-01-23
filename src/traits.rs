@@ -3,15 +3,32 @@ use crate::error::{Result, Error};
 #[cfg(feature = "async")]
 use async_trait::async_trait;
 use crate::http::Client;
+use serde::de::DeserializeOwned;
+use crate::util::fetch_route;
 
 /// A trait representing a struct/enum which can generate an instance with default values
-/// for its properties.
+/// for its properties on `Type::new()`.
 pub trait Initializable {
     fn new() -> Self;
 }
 
+impl<T: Initializable> Default for T {
+    fn default() -> T { T::new() }  // that's the whole point of it, after all
+}
+
+/// A trait representing a type with a property used to be fetched.
+/// This property must be returned by the `get_fetch_prop` function.
+/// This trait is used in parallel with `PropFetchable`.
+pub trait GetFetchProp: Sized {
+    type Property;
+
+    /// Obtain the revelant property for fetching.
+    #[doc(hidden)]
+    fn get_fetch_prop(&self) -> &Self::Property;  // necessary for Refetchable blanket impl
+}
+
 /// A trait representing a type whose instance can be fetched from the API using some property.
-/// For tags, see [`TagFetchable`].
+/// This is usually the object's tag.
 #[cfg_attr(feature = "async", async_trait)]
 pub trait PropFetchable: Sized {
     type Property;
@@ -23,43 +40,50 @@ pub trait PropFetchable: Sized {
     #[cfg(feature = "async")]
     async fn a_fetch(client: &Client, prop: &Self::Property) -> Result<Self>;
 
-    /// Obtain the revelant property for fetching.
-    #[doc(hidden)]
-    fn get_fetch_prop(&self) -> &Self::Property;  // necessary for Refetchable blanket impl
-
     // /// Fetches an object once again.
     //    fn refetch(&self) -> Result<Self> {
     //        Self::fetch()
     //    }
 }
 
-/// A trait representing a type whose instance can be fetched from the API using some property.
-/// This is usually the object's tag.
-#[cfg_attr(feature = "async", async_trait)]
-pub trait TagFetchable: Sized {
-    /// (Sync) Fetch and construct a new instance of this type.
-    fn fetch(client: &Client, prop: &str) -> Result<Self>;
+/// A trait representing a type which holds some method of obtaining a route.
+/// This causes a blanket implementation of [`PropFetchable`] using the library's
+/// `fetch_route` tool for types implementing [`GetFetchProp`] and [`serde::de::DeserializeOwned`].
+///
+/// [`PropFetchable`]: ./trait.PropFetchable.html
+/// [`GetFetchProp`]: ./trait.GetFetchProp.html
+/// [`serde::de::DeserializeOwned`]: https://docs.rs/serde/*/serde/de/trait.DeserializeOwned.html
+pub trait PropRouteable: Sized {
+    type Property;
 
-    /// (Async) Fetch and construct a new instance of this type.
-    #[cfg(feature = "async")]
-    async fn a_fetch(client: &Client, prop: &str) -> Result<Self>;
-
-    /// Obtain the revelant property for fetching.
+    /// Obtain the relevant route for fetching, given the property.
     #[doc(hidden)]
-    fn get_fetch_prop(&self) -> &str;  // necessary for Refetchable blanket impl
+    fn get_route(prop: &Self::Property) -> Self::Property;
+}
 
-    // /// Fetches an object once again.
-    //    fn refetch(&self) -> Result<Self> {
-    //        Self::fetch()
-    //    }
+#[cfg_attr(feature = "async", async_trait)]
+impl<T, U> PropFetchable for T
+    where T: PropRouteable<Property=U> + GetFetchProp + DeserializeOwned + Sized {
+    type Property = U;
+
+    fn fetch(client: &Client, prop: &Self::Property) -> Result<T> {
+        let route = Self::get_route(prop);
+        fetch_route::<T>(client, route)
+    }
+
+    #[cfg(feature="async")]
+    async fn a_fetch(client: &Client, prop: &Self::Property) -> Result<T> {
+        let route = Self::get_route(prop);
+        // TODO: a_fetch_route::<T>(client, route)
+    }
 }
 
 /// A trait representing a type whose instance can be fetched again.
-/// Note that, thanks to [`PropFetchable::get_fetch_prop`], all types implementing
-/// [`PropFetchable`] also implement [`Refetchable`] due to a blanket implementation.
+/// Note that all types implementing [`GetFetchProp`] and [`PropFetchable`] also implement
+/// [`Refetchable`] due to a blanket implementation.
 ///
 /// [`PropFetchable`]: ./traits/trait.PropFetchable.html
-/// [`PropFetchable`]: ./traits/trait.PropFetchable.html#method.get_fetch_prop
+/// [`GetFetchProp`]: ./traits/trait.GetFetchProp.html
 #[cfg_attr(feature = "async", async_trait)]
 pub trait Refetchable: Sized {
     /// (Sync) Causes this instance to be re-fetched (i.e., updated to latest Brawl Stars data).
@@ -72,7 +96,7 @@ pub trait Refetchable: Sized {
 
 #[cfg_attr(feature = "async", async_trait)]
 impl<T> Refetchable for T
-    where T: PropFetchable + Sized {
+    where T: GetFetchProp + PropFetchable + Sized {
     fn refetch(self, client: &Client) -> Result<Self> {
         Self::fetch(client, &self.get_fetch_prop())
     }

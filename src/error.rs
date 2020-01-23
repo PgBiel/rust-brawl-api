@@ -1,8 +1,8 @@
 use std::result::Result as StdResult;
 use std::error::Error as StdError;
 use std::time::SystemTime;
-use serde::Deserialize;
-use serde_json::{Error as SerdeError, Value as JsonValue};
+use serde::{self, Serialize, Deserialize};
+use serde_json::{self, Error as SerdeError, Value as JsonValue};
 use url::ParseError as UrlError;
 use reqwest::blocking::Response;
 use reqwest::{
@@ -12,12 +12,13 @@ use reqwest::{
 use std::fmt::{Formatter, Display};
 use crate::util::JsonMap;
 use crate::traits::Initializable;
+use std::convert::TryInto;
 
 /// Represents a `brawl-api` Result type.
 pub type Result<T> = StdResult<T, Error>;
 
 /// Represents all possible errors while using methods from this lib (`brawl-api`).
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Error {
     /// Represents an error occurred while using `serde_json` for serializing/deserializing JSON
     /// data. (A `serde_json` crate error)
@@ -71,18 +72,23 @@ pub enum Error {
 }
 
 /// Represents an error given by the API, with its specifications.
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct APIError {
     /// The reason for the error.
+    #[serde(default)]
     pub reason: String,
 
     /// Optionally, a human-readable message for the error.
+    #[serde(default)]
     pub message: Option<String>,
 
     /// Optionally, a specific type of this error.
+    #[serde(default)]
+    #[serde(rename = "type")]
     pub err_type: Option<String>,
 
     /// Optionally, any extra details about this error.
+    #[serde(default)]
     pub detail: Option<JsonMap>,
 }
 
@@ -135,6 +141,25 @@ impl StdError for Error {
 
             Error::Url(_) => "Invalid URL was given/built.",
 
+            Error::Ratelimited { limit, time_until_reset, .. } => {
+                let lim_part = match limit {
+                    Some(lim) => format!(" Limit of {} requests/min.", lim),
+                    None => String::from(""),
+                };
+
+                let time_part = match time_until_reset {  // TODO: use chrono and humanize stamp
+                    Some(ref timeur) => format!(" Resets at timestamp {}.", timeur),
+                    None => String::from(""),
+                };
+
+                let dot = match limit.is_none() && time_until_reset.is_none() {
+                    true => ".",
+                    false => ":",
+                };
+
+                &*format!("Ratelimited{}{}{}", dot, lim_part, time_part)
+            },
+
             Error::Request(ref e) => e.description(),
 
             Error::Decode(msg, _) => msg,
@@ -158,12 +183,14 @@ impl StdError for Error {
 }
 
 impl Error {
+    /// Obtain an Error from a Response (blocking). Optionally specify a pre-parsed JsonValue
+    /// for the body, otherwise that parsing will be done inside this function.
     #[doc(hidden)]
     pub(crate) fn from_response(response: Response, value: Option<JsonValue>) -> Error {
         let status = response.status();
         let value: Option<JsonValue> = match value {
             Some(val) => Some(val),
-            None => ::serde_json::from_reader(response).ok()
+            None => serde_json::from_reader(response).ok()
         };
 
         let headers: HeaderMap = response.headers();
@@ -173,16 +200,16 @@ impl Error {
             if let Ok(reset) = reset_header {
                 return Error::Ratelimited {
                     limit: match headers.get("x-ratelimit-limit") {
-                        Some(lim_header) => lim_header.to_str().unwrap_or(
-                            "Not a number, to provoke a None"
-                        ).parse().ok(),
+                        Some(lim_header) => lim_header.to_str().ok().and_then(
+                            |&s| { s.parse().ok() }
+                        ),
                         None => None,
                     },
 
                     remaining: match headers.get("x-ratelimit-remaining") {
-                        Some(rem_header) => rem_header.to_str().unwrap_or(
-                            "Not a number, to provoke a None"
-                        ).parse().ok(),
+                        Some(rem_header) => rem_header.to_str().ok().and_then(
+                            |&s| { s.parse().ok() }
+                        ),
                         None => None,
                     },
 
@@ -191,6 +218,11 @@ impl Error {
             }
         }
 
-        Error::Status(status, value)
-    }
+        let api_error: Option<APIError> = match value {
+            Some(ref val) => serde_json::from_value(val.clone()).ok(),
+            None => None,
+        };
+
+        Error::Status(status, api_error, value)
+    }  // TODO: a_from_response
 }
