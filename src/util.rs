@@ -13,6 +13,8 @@ use reqwest::blocking::{
 use reqwest::{
     Response as AResponse,
 };
+use crate::traits::{PropRouteable, GetFetchProp};
+use std::ops::{Add, AddAssign, Sub};
 
 pub(crate) fn auto_hashtag(tag: &str) -> String {
     let mut new_tag = String::from(tag.clone());
@@ -29,7 +31,7 @@ pub(crate) type JsonMap = SerdeJsonMap<String, Value>;
 /// (Sync) Fetches a deserializable struct/enum/... from some route.
 pub(crate) fn fetch_route<T>(client: &Client, route: &Route) -> Result<T>
     where T: DeserializeOwned {
-    let mut request_b = client.build_endpoint_get(&*route.to_url_str())?;
+    let request_b = client.build_endpoint_get(&*route.to_url_str())?;
     let response: StdResult<Response, ReqwestError> = request_b.send();
     let response = response.map_err(Error::Request)?;
 
@@ -45,7 +47,7 @@ pub(crate) fn fetch_route<T>(client: &Client, route: &Route) -> Result<T>
 #[cfg(feature = "async")]
 pub(crate) async fn a_fetch_route<T>(client: &Client, route: &Route) -> Result<T>
     where T: DeserializeOwned {
-    let mut request_b = client.a_build_endpoint_get(&*route.to_url_str())?;
+    let request_b = client.a_build_endpoint_get(&*route.to_url_str())?;
     let response: StdResult<AResponse, ReqwestError> = request_b.send().await;
     let response = response.map_err(Error::Request)?;
 
@@ -56,4 +58,15 @@ pub(crate) async fn a_fetch_route<T>(client: &Client, route: &Route) -> Result<T
     } else {
         Err(Error::a_from_response(response, None).await)
     }
+}
+
+/// (Async) A default implementation for a_fetch when PropRouteable, GetFetchProp and
+/// DeserializeOwned are present.
+#[doc(hidden)]
+#[cfg(feature = "async")]
+pub(crate) async fn deser_a_fetch<S, U>(client: &Client, prop: U) -> Result<S>
+    where S: PropRouteable<Property=U> + GetFetchProp<Property=U> + DeserializeOwned + Sized + Sync,
+          U: Sync + Send, {
+    let route = S::get_route(&prop);
+    a_fetch_route::<S>(client, &route).await
 }

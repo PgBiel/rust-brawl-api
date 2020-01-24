@@ -24,10 +24,10 @@ pub struct Client {
 impl Client {
     /// Creates a new Client with a given API auth key.
     pub fn new(auth_key: &str) -> Client {
-        let mut inner_b: ReqClientBuilder = ReqClient::builder().user_agent(BRAWL_USER_AGENT);
+        let inner_b: ReqClientBuilder = ReqClient::builder().user_agent(BRAWL_USER_AGENT);
 
         #[cfg(feature = "async")]
-        let mut a_inner_b: AReqClientBuilder = AReqClient::builder().user_agent(BRAWL_USER_AGENT);
+        let a_inner_b: AReqClientBuilder = AReqClient::builder().user_agent(BRAWL_USER_AGENT);
 
         Client {
             auth_key: String::from(auth_key),
@@ -49,7 +49,9 @@ impl Client {
 
     /// Creates a Request instance for one specific endpoint and returns it.
     pub fn endpoint_request(&self, endpoint: &str) -> Request<'_> {
-        Request::<'_>::default()
+        let mut req = Request::<'_>::default();
+        req.endpoint = String::from(endpoint);
+        req
     }
 
     /// (For sync usage) Creates a Request instance for one specific endpoint and calls

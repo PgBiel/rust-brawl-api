@@ -17,7 +17,7 @@ use std::convert::TryInto;
 pub type Result<T> = StdResult<T, Error>;
 
 /// Represents all possible errors while using methods from this lib (`brawl-api`).
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug)]
 pub enum Error {
     /// Represents an error occurred while using `serde_json` for serializing/deserializing JSON
     /// data. (A `serde_json` crate error)
@@ -71,7 +71,7 @@ pub enum Error {
 }
 
 /// Represents an error given by the API, with its specifications.
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct APIError {
     /// The reason for the error.
     #[serde(default)]
@@ -125,51 +125,13 @@ impl Display for Error {
         match *self {
             Error::Json(ref e) => e.fmt(f),
             Error::Request(ref e) => e.fmt(f),
-            _ => f.write_str(self.description()),
+            _ => f.write_str(&*self.description()),
             // _ => f.write_str(self.description())
         }
     }
 }
 
 impl StdError for Error {
-    fn description(&self) -> &str {
-        match *self {
-            Error::Json(ref e) => e.description(),
-
-            Error::Authorization(_) => "Auth key was provided in an invalid format for a header.",
-
-            Error::Url(_) => "Invalid URL was given/built.",
-
-            Error::Ratelimited { limit, time_until_reset, .. } => {
-                let lim_part = match limit {
-                    Some(lim) => format!(" Limit of {} requests/min.", lim),
-                    None => String::from(""),
-                };
-
-                let time_part = match time_until_reset {  // TODO: use chrono and humanize stamp
-                    Some(ref timeur) => format!(" Resets at timestamp {}.", timeur),
-                    None => String::from(""),
-                };
-
-                let dot = match limit.is_none() && time_until_reset.is_none() {
-                    true => ".",
-                    false => ":",
-                };
-
-                &*format!("Ratelimited{}{}{}", dot, lim_part, time_part)
-            },
-
-            Error::Request(ref e) => e.description(),
-
-            Error::Decode(msg, _) => msg,
-
-            Error::Status(ref status, _, _) => status.canonical_reason().unwrap_or(
-                "Unknown HTTP status code error received"
-            ),
-
-            Error::_AntiExhaustive => unreachable!("May not use the '_AntiExhaustive' variant."),
-        }
-    }
 
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match *self {
@@ -182,17 +144,60 @@ impl StdError for Error {
 }
 
 impl Error {
+
+    fn description(&self) -> String {
+        match *self {
+            Error::Json(ref e) => String::from(e.description()),
+
+            Error::Authorization(_) => String::from("Auth key was provided in an invalid format for a header."),
+
+            Error::Url(_) => String::from("Invalid URL was given/built."),
+
+            Error::Ratelimited { limit, ref time_until_reset, .. } => {
+                let lim_part = match limit {
+                    Some(lim) => format!(" Limit of {} requests/min.", lim),
+                    None => String::from(""),
+                };
+
+                let time_part = match *time_until_reset {  // TODO: use chrono and humanize stamp
+                    Some(ref timeur) => format!(" Resets at timestamp {}.", timeur),
+                    None => String::from(""),
+                };
+
+                let dot = match limit.is_none() && time_until_reset.is_none() {
+                    true => ".",
+                    false => ":",
+                };
+
+                format!("Ratelimited{}{}{}", dot, lim_part, time_part)
+            },
+
+            Error::Request(ref e) => String::from(e.description()),
+
+            Error::Decode(msg, _) => String::from(msg),
+
+            Error::Status(ref status, _, _) => String::from(status.canonical_reason().unwrap_or(
+                "Unknown HTTP status code error received"
+            )),
+
+            Error::_AntiExhaustive => unreachable!("May not use the '_AntiExhaustive' variant."),
+        }
+    }
+
     /// Obtain an Error from a Response (blocking). Optionally specify a pre-parsed JsonValue
     /// for the body, otherwise that parsing will be done inside this function.
     #[doc(hidden)]
     pub(crate) fn from_response(response: Response, value: Option<JsonValue>) -> Error {
         let status = response.status();
+
+        let headers: &HeaderMap = response.headers();
+        let headers = headers.clone();
+
         let value: Option<JsonValue> = match value {
             Some(val) => Some(val),
             None => serde_json::from_reader(response).ok()
         };
 
-        let headers: &HeaderMap = response.headers();
         let reset_header = headers.get("x-ratelimit-reset");
         if let Some(reset_header) = reset_header {  // ratelimited
             let reset_header = reset_header.to_str();
@@ -200,14 +205,14 @@ impl Error {
                 return Error::Ratelimited {
                     limit: match headers.get("x-ratelimit-limit") {
                         Some(lim_header) => lim_header.to_str().ok().and_then(
-                            |&s| { s.parse().ok() }
+                            |s| { s.parse().ok() }
                         ),
                         None => None,
                     },
 
                     remaining: match headers.get("x-ratelimit-remaining") {
                         Some(rem_header) => rem_header.to_str().ok().and_then(
-                            |&s| { s.parse().ok() }
+                            |s| { s.parse().ok() }
                         ),
                         None => None,
                     },
@@ -231,12 +236,14 @@ impl Error {
     #[cfg(feature = "async")]
     pub(crate) async fn a_from_response(response: AResponse, value: Option<JsonValue>) -> Error {
         let status = response.status();
+        let headers: &HeaderMap = response.headers();
+        let headers = headers.clone();
+
         let value: Option<JsonValue> = match value {
             Some(val) => Some(val),
             None => response.json().await.ok()
         };
 
-        let headers: &HeaderMap = response.headers();
         let reset_header = headers.get("x-ratelimit-reset");
         if let Some(reset_header) = reset_header {  // ratelimited
             let reset_header = reset_header.to_str();

@@ -24,6 +24,8 @@ use crate::http::routes::Route;
 use crate::util::auto_hashtag;
 use crate::serde::deserialize_number_from_string;
 use reqwest::StatusCode;
+use num_traits::PrimInt;
+use std::str::FromStr;
 
 /// A struct representing a Brawl Stars player, with all of its data.
 /// Use [`Player::fetch`] to fetch one based on tag.
@@ -64,7 +66,7 @@ pub struct Player {
     pub highest_trophies: usize,
 
     /// The player's experience level.
-    #[serde(default = "one_default_usize")]
+    #[serde(default = "one_default")]
     pub exp_level: usize,
 
     /// The player's experience points.
@@ -106,7 +108,10 @@ pub struct Player {
     pub name_color: usize,
 }
 
-fn one_default_usize() -> usize { 1 }
+fn one_default<T>() -> T
+    where T: PrimInt + FromStr,
+          <T as FromStr>::Err: ::std::fmt::Debug
+{ "1".parse().unwrap() }
 fn false_default() -> bool { false }
 fn oxffffff_default_usize() -> usize { 0xffffff }
 
@@ -228,7 +233,7 @@ pub struct BrawlerStat {
     pub id: isize,
 
     /// The brawler's rank.
-    #[serde(default = "one_default_usize")]
+    #[serde(default = "one_default")]
     pub rank: u16,
 
     /// The brawler's trophies.
@@ -240,7 +245,7 @@ pub struct BrawlerStat {
     pub highest_trophies: usize,
 
     /// The brawler's power (1-10).
-    #[serde(default = "one_default_usize")]
+    #[serde(default = "one_default")]
     pub power: u8,
 
     /// The brawler's name.

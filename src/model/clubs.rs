@@ -12,6 +12,7 @@ use crate::http::Client;
 use crate::serde::deserialize_number_from_string;
 use crate::http::routes::Route;
 use crate::util::auto_hashtag;
+use num_traits::PrimInt;
 
 /// The type of club (whether it's open, invite-only, or closed).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -71,7 +72,6 @@ pub struct Club {
     pub club_type: ClubType
 }
 
-fn one_default_usize() -> usize { 1 }
 fn false_default() -> bool { false }
 fn oxffffff_default_usize() -> usize { 0xffffff }
 
