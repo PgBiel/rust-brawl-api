@@ -1,7 +1,8 @@
 use crate::b_api_concat;
-use url::Url;
+
 
 /// An enum representing the possible Brawl API routes.
+#[non_exhaustive]
 #[derive(Debug, Clone)]
 pub enum Route {
     /// Route for the `/players/:tag` endpoint. (`tag` must begin with a `#` (`%23`) for correct
@@ -27,9 +28,6 @@ pub enum Route {
     ///
     /// This fetches a club's members.
     ClubMembers(String),
-
-    #[doc(hidden)]
-    _AntiExhaustive,
 }
 
 impl Route {
@@ -59,8 +57,6 @@ impl Route {
             Route::ClubMembers(ref s) => format!(
                 "{}{}{}", b_api_concat!("/clubs/"), s, "/members"
             ),
-
-            _AntiExhaustive => unreachable!("May not use the '_AntiExhaustive' variant."),
         }
     }
 }

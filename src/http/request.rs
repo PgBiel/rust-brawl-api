@@ -1,11 +1,10 @@
 use reqwest::blocking::{
-    RequestBuilder, Body
+    RequestBuilder
 };
 
 #[cfg(feature = "async")]
 use reqwest::{
-    RequestBuilder as ARequestBuilder,
-    Body as ABody
+    RequestBuilder as ARequestBuilder
 };
 
 use reqwest::{
@@ -20,7 +19,7 @@ use reqwest::{
 use crate::error::{Result, Error};
 use crate::http::Client;
 use crate::constants::USER_AGENT as B_API_USER_AGENT;
-use crate::map_build;
+
 
 /// A struct representing a request to some endpoint.
 #[derive(Debug, Clone, PartialEq)]
@@ -58,7 +57,7 @@ impl<'a> Request<'a> {
             body,
             headers: ref r_headers,
             endpoint: ref r_endpoint,
-            method: ref method,
+            ref method,
         } = *self;
 
         let mut builder = client.inner.request(
@@ -102,7 +101,7 @@ impl<'a> Request<'a> {
             body,
             headers: ref r_headers,
             endpoint: ref r_endpoint,
-            method: ref method,
+            ref method,
         } = *self;
 
         let mut builder = client.a_inner.request(

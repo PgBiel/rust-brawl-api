@@ -2,30 +2,30 @@
 //! Included by the feature 'players'; removing that feature will disable the usage of this module.
 
 use serde::{self, Serialize, Deserialize};
-use reqwest::blocking::{
-    Response, RequestBuilder
-};
+
 
 #[cfg(feature = "async")]
-use reqwest::{
-    Response as AResponse
-};
+
+
+#[cfg(feature = "async")]
+use crate::util::a_fetch_route;
 
 #[cfg(feature = "async")]
 use async_trait::async_trait;
 
-use crate::traits::{FetchFrom, PropFetchable, GetFetchProp, PropRouteable};
-use crate::error::{Result, Error};
+use crate::traits::{FetchFrom, PropFetchable, GetFetchProp};
+use crate::error::{Result};
 
 #[cfg(feature = "clubs")]
-use super::clubs::ClubMember;
+use super::super::clubs::ClubMember;
 use crate::http::Client;
 use crate::http::routes::Route;
-use crate::util::auto_hashtag;
+use crate::util::{auto_hashtag, fetch_route};
 use crate::serde::deserialize_number_from_string;
-use reqwest::StatusCode;
+
 use num_traits::PrimInt;
 use std::str::FromStr;
+use crate::model::players::battlelog::{BattlePlayer};
 
 /// A struct representing a Brawl Stars player, with all of its data.
 /// Use [`Player::fetch`] to fetch one based on tag.
@@ -99,7 +99,7 @@ pub struct Player {
 
     /// The player's brawlers.
     #[serde(default)]
-    pub brawlers: Vec<BrawlerStat>,
+    pub brawlers: Vec<PlayerBrawlerStat>,
 
     /// The player's name color, as an integer (Default is 0xffffff = 16777215 - this is used
     /// when the data is not available).
@@ -113,7 +113,7 @@ fn one_default<T>() -> T
           <T as FromStr>::Err: ::std::fmt::Debug
 { "1".parse().unwrap() }
 fn false_default() -> bool { false }
-fn oxffffff_default_usize() -> usize { 0xffffff }
+fn oxffffff_default_usize() -> usize { 0xff_ff_ff }
 
 impl Default for Player {
     
@@ -150,9 +150,9 @@ impl Default for Player {
 
             best_time_as_big_brawler: 0,
 
-            brawlers: Vec::<BrawlerStat>::new(),
+            brawlers: Vec::<PlayerBrawlerStat>::new(),
 
-            name_color: 0xffffff,
+            name_color: 0xff_ff_ff,
         }
     }
 }
@@ -161,10 +161,6 @@ impl GetFetchProp for Player {
     type Property = String;
 
     fn get_fetch_prop(&self) -> &String { &self.tag }
-}
-
-impl PropRouteable for Player {
-    type Property = String;
 
     fn get_route(tag: &String) -> Route { Route::Player(auto_hashtag(tag)) }
 }  // PropFetchable is automatically implemented
@@ -173,7 +169,7 @@ impl PropRouteable for Player {
 #[cfg(feature = "clubs")]
 impl FetchFrom<ClubMember> for Player {
     fn fetch_from(client: &Client, member: ClubMember) -> Result<Player> {
-        Player::fetch(client, member.tag.clone())
+        Player::fetch(client, member.tag)
     }
 
     #[cfg(feature = "async")]
@@ -182,7 +178,38 @@ impl FetchFrom<ClubMember> for Player {
     }
 }
 
-// TODO: Battle logs endpoint
+#[cfg_attr(feature = "async", async_trait)]
+impl FetchFrom<BattlePlayer> for Player {
+    fn fetch_from(client: &Client, b_player: BattlePlayer) -> Result<Player> {
+        Player::fetch(client, b_player.tag)
+    }
+
+    #[cfg(feature = "async")]
+    async fn a_fetch_from(client: &Client, b_player: BattlePlayer) -> Result<Player> {
+        Player::a_fetch(client, b_player.tag.clone()).await
+    }
+}
+
+#[cfg_attr(feature = "async", async_trait)]
+impl PropFetchable for Player {
+    type Property = String;
+
+    /// (Sync) Fetches a player from its tag.
+    fn fetch(client: &Client, tag: String) -> Result<Player> {
+        let route = Self::get_route(&tag);
+        fetch_route::<Player>(client, &route)
+    }
+
+    /// (Async) Fetches a player from its tag.
+    #[cfg(feature="async")]
+    async fn a_fetch(client: &Client, tag: String) -> Result<Player>
+        where Self: 'async_trait,
+              Self::Property: 'async_trait,
+    {
+        let route = Player::get_route(&tag);
+        a_fetch_route::<Player>(client, &route).await
+    }
+}
 
 
 /// A struct representing a club obtained from [`Player.club`].
@@ -219,7 +246,7 @@ impl Default for PlayerClub {
 /// [`Player.brawlers`]: ./struct.Player.html#structfield.brawlers
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct BrawlerStat {
+pub struct PlayerBrawlerStat {
 
     /// A vector containing the brawler's star powers (represented by [`StarPower`]),
     /// if any (otherwise empty vector).
@@ -253,11 +280,11 @@ pub struct BrawlerStat {
     pub name: String,
 }
 
-impl Default for BrawlerStat {
+impl Default for PlayerBrawlerStat {
     
     /// Initializes a new BrawlerStat instance, with default values.
-    fn default() -> BrawlerStat {
-        BrawlerStat {
+    fn default() -> PlayerBrawlerStat {
+        PlayerBrawlerStat {
             star_powers: vec![],
             id: 0,
             rank: 1,

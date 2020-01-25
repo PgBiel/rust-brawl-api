@@ -13,7 +13,7 @@ mod macros;
 pub mod model;
 
 #[cfg(feature = "players")]
-pub use model::players::{Player, PlayerClub, BrawlerStat, StarPower};
+pub use model::players::{Player, PlayerClub, PlayerBrawlerStat, StarPower};
 
 #[cfg(feature = "clubs")]
 pub use model::clubs::{Club, ClubMember, ClubMemberRole};

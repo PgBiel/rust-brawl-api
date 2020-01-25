@@ -3,16 +3,20 @@ use async_trait::async_trait;
 
 use serde::{self, Serialize, Deserialize};
 
-use crate::traits::{PropFetchable, FetchFrom, GetFetchProp, PropRouteable};
+use crate::traits::{PropFetchable, FetchFrom, GetFetchProp};
 use crate::error::Result;
+
+#[cfg(feature = "async")]
+use crate::util::a_fetch_route;
 
 #[cfg(feature = "players")]
 use super::players::PlayerClub;
 use crate::http::Client;
 use crate::serde::deserialize_number_from_string;
 use crate::http::routes::Route;
-use crate::util::auto_hashtag;
-use num_traits::PrimInt;
+use crate::util::{auto_hashtag, fetch_route};
+
+use std::fmt::{Display, Formatter};
 
 /// The type of club (whether it's open, invite-only, or closed).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -21,6 +25,9 @@ pub enum ClubType {
     Open,
     InviteOnly,
     Closed,
+
+    #[doc(hidden)]
+    _AntiExhaustive,
 }
 
 impl Default for ClubType {
@@ -72,8 +79,7 @@ pub struct Club {
     pub club_type: ClubType
 }
 
-fn false_default() -> bool { false }
-fn oxffffff_default_usize() -> usize { 0xffffff }
+fn oxffffff_default_usize() -> usize { 0xff_ff_ff }
 
 impl Default for Club {
     
@@ -96,19 +102,36 @@ impl GetFetchProp for Club {
     type Property = String;
 
     fn get_fetch_prop(&self) -> &String { &self.tag }
-}
-
-impl PropRouteable for Club {
-    type Property = String;
 
     fn get_route(tag: &String) -> Route { Route::Club(auto_hashtag(tag)) }
-}  // PropFetchable is automatically implemented
+}
+
+#[cfg_attr(feature = "async", async_trait)]
+impl PropFetchable for Club {
+    type Property = String;
+
+    /// (Sync) Fetches a club from its tag.
+    fn fetch(client: &Client, tag: String) -> Result<Club> {
+        let route = Club::get_route(&tag);
+        fetch_route::<Club>(client, &route)
+    }
+
+    /// (Async) Fetches a club from its tag.
+    #[cfg(feature="async")]
+    async fn a_fetch(client: &Client, tag: String) -> Result<Club>
+        where Self: 'async_trait,
+              Self::Property: 'async_trait,
+    {
+        let route = Club::get_route(&tag);
+        a_fetch_route::<Club>(client, &route).await
+    }
+}
 
 #[cfg_attr(feature = "async", async_trait)]
 #[cfg(feature = "players")]
 impl FetchFrom<PlayerClub> for Club {
     fn fetch_from(client: &Client, p_club: PlayerClub) -> Result<Club> {
-        Club::fetch(client, p_club.tag.clone())
+        Club::fetch(client, p_club.tag)
     }
 
     #[cfg(feature = "async")]
@@ -120,6 +143,7 @@ impl FetchFrom<PlayerClub> for Club {
 /// An enum representing a member's possible roles (See [`ClubMember`]).
 ///
 /// [`ClubMember`]: ./struct.ClubMember.html
+#[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ClubMemberRole {
@@ -127,6 +151,20 @@ pub enum ClubMemberRole {
     Senior,
     VicePresident,
     President,
+}
+
+impl Display for ClubMemberRole {
+    fn fmt(&self, f: &mut Formatter<'_>) -> ::std::fmt::Result {
+        write!(
+            f, "{}",
+            match *self {
+                ClubMemberRole::Member => "Member",
+                ClubMemberRole::Senior => "Senior",
+                ClubMemberRole::VicePresident => "VicePresident",
+                ClubMemberRole::President => "President",
+            }
+        )
+    }
 }
 
 impl Default for ClubMemberRole {
@@ -139,7 +177,7 @@ impl Default for ClubMemberRole {
 /// A struct representing a Brawl Stars club's member, with its club-relevant data
 /// (most importantly, its role). Use [`Player::fetch_from`] to fetch the full player data.
 ///
-/// [`ClubMember`]: ../players/struct.Player.html#method.fetch_from
+/// [`ClubMember`]: ../players/player/struct.Player.html#method.fetch_from
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ClubMember {
 
@@ -176,7 +214,7 @@ impl Default for ClubMember {
             name: String::from(""),
             trophies: 0,
             role: ClubMemberRole::Member,
-            name_color: 0xffffff
+            name_color: 0xff_ff_ff
         }
     }
 }

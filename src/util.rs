@@ -1,6 +1,6 @@
 use std::result::Result as StdResult;
-use serde::{Deserialize, de::DeserializeOwned};
-use serde_json::{Map as SerdeJsonMap, Value, Error as JsonError};
+use serde::de::DeserializeOwned;
+use serde_json::{Map as SerdeJsonMap, Value};
 use crate::error::{Result, Error};
 use crate::http::Client;
 use crate::http::routes::Route;
@@ -13,12 +13,10 @@ use reqwest::blocking::{
 use reqwest::{
     Response as AResponse,
 };
-use crate::traits::{PropRouteable, GetFetchProp};
-use std::ops::{Add, AddAssign, Sub};
 
 pub(crate) fn auto_hashtag(tag: &str) -> String {
-    let mut new_tag = String::from(tag.clone());
-    if tag.starts_with("#") {
+    let mut new_tag = tag.to_owned();
+    if tag.starts_with('#') {
         new_tag = new_tag.replacen("#", "%23", 1);
     } else if cfg!(feature = "auto-hashtag") {  // automtically add the hashtag
         new_tag = format!("%23{}", new_tag);
@@ -37,9 +35,9 @@ pub(crate) fn fetch_route<T>(client: &Client, route: &Route) -> Result<T>
 
     let status: StatusCode = response.status();
     if status.is_success() {
-        return serde_json::from_reader::<Response, T>(response).map_err(Error::Json);
+        serde_json::from_reader::<Response, T>(response).map_err(Error::Json)
     } else {
-        return Err(Error::from_response(response, None));
+        Err(Error::from_response(response, None))
     }
 }
 
@@ -58,15 +56,4 @@ pub(crate) async fn a_fetch_route<T>(client: &Client, route: &Route) -> Result<T
     } else {
         Err(Error::a_from_response(response, None).await)
     }
-}
-
-/// (Async) A default implementation for a_fetch when PropRouteable, GetFetchProp and
-/// DeserializeOwned are present.
-#[doc(hidden)]
-#[cfg(feature = "async")]
-pub(crate) async fn deser_a_fetch<S, U>(client: &Client, prop: U) -> Result<S>
-    where S: PropRouteable<Property=U> + GetFetchProp<Property=U> + DeserializeOwned + Sized + Sync,
-          U: Sync + Send, {
-    let route = S::get_route(&prop);
-    a_fetch_route::<S>(client, &route).await
 }

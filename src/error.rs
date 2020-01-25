@@ -1,6 +1,6 @@
 use std::result::Result as StdResult;
 use std::error::Error as StdError;
-use std::time::SystemTime;
+
 use serde::{self, Serialize, Deserialize};
 use serde_json::{self, Error as SerdeError, Value as JsonValue};
 use url::ParseError as UrlError;
@@ -11,12 +11,13 @@ use reqwest::{
 };
 use std::fmt::{Formatter, Display};
 use crate::util::JsonMap;
-use std::convert::TryInto;
+
 
 /// Represents a `brawl-api` Result type.
 pub type Result<T> = StdResult<T, Error>;
 
 /// Represents all possible errors while using methods from this lib (`brawl-api`).
+#[non_exhaustive]
 #[derive(Debug)]
 pub enum Error {
     /// Represents an error occurred while using `serde_json` for serializing/deserializing JSON
@@ -66,8 +67,14 @@ pub enum Error {
     /// [`APIError`]: ./error/struct.APIError.html
     Status(StatusCode, Option<APIError>, Option<JsonValue>),
 
-    #[doc(hidden)]
-    _AntiExhaustive,
+    /// Represents an error while operating the conversion of types through [`FetchFrom`]. Note that
+    /// any errors while *fetching* things are either an `Error::Json` or `Error::Request`, while
+    /// this error refers to additional operations done *after* the fetching is done.
+    ///
+    /// At field `.0`, there is a `String` object describing what occurred.
+    ///
+    /// [`FetchFrom`]: ./traits/trait.FetchFrom.html
+    FetchFrom(String),
 }
 
 /// Represents an error given by the API, with its specifications.
@@ -164,9 +171,12 @@ impl Error {
                     None => String::from(""),
                 };
 
-                let dot = match limit.is_none() && time_until_reset.is_none() {
-                    true => ".",
-                    false => ":",
+                let dot = {
+                    if limit.is_none() && time_until_reset.is_none() {
+                        "."
+                    } else {
+                        ":"
+                    }
                 };
 
                 format!("Ratelimited{}{}{}", dot, lim_part, time_part)
@@ -176,11 +186,13 @@ impl Error {
 
             Error::Decode(msg, _) => String::from(msg),
 
-            Error::Status(ref status, _, _) => String::from(status.canonical_reason().unwrap_or(
-                "Unknown HTTP status code error received"
-            )),
+            Error::Status(ref status, _, _) => String::from(
+                status.canonical_reason().unwrap_or(
+                    "Unknown HTTP status code error received"
+                )
+            ),
 
-            Error::_AntiExhaustive => unreachable!("May not use the '_AntiExhaustive' variant."),
+            Error::FetchFrom(ref string) => string.clone(),
         }
     }
 
