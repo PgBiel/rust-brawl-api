@@ -7,3 +7,8 @@ pub use players::*;
 pub mod clubs;
 #[cfg(feature = "clubs")]
 pub use clubs::*;
+
+#[cfg(feature = "rankings")]
+pub mod rankings;
+#[cfg(feature = "rankings")]
+pub use rankings::*;

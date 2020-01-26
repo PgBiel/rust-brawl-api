@@ -17,17 +17,17 @@ use crate::http::routes::Route;
 use crate::util::{auto_hashtag, fetch_route};
 
 use std::fmt::{Display, Formatter};
+use crate::model::rankings::ClubRanking;
+use std::cmp::Ordering;
 
 /// The type of club (whether it's open, invite-only, or closed).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ClubType {
     Open,
     InviteOnly,
     Closed,
-
-    #[doc(hidden)]
-    _AntiExhaustive,
 }
 
 impl Default for ClubType {
@@ -37,11 +37,24 @@ impl Default for ClubType {
     fn default() -> ClubType { ClubType::Open }
 }
 
+impl Display for ClubType {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(
+            f, "{}",
+            match self {
+                ClubType::Open => "Open",
+                ClubType::InviteOnly => "InviteOnly",
+                ClubType::Closed => "Closed",
+            }
+        )
+    }
+}
+
 /// A struct representing a Brawl Stars club, with all of its data.
 /// Use [`Club::fetch`] to fetch one based on tag.
 ///
 /// [`Club::fetch`]: ./struct.Club.html#method.fetch
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Club {
 
@@ -111,14 +124,14 @@ impl PropFetchable for Club {
     type Property = String;
 
     /// (Sync) Fetches a club from its tag.
-    fn fetch(client: &Client, tag: String) -> Result<Club> {
+    fn fetch(client: &Client, tag: &String) -> Result<Club> {
         let route = Club::get_route(&tag);
         fetch_route::<Club>(client, &route)
     }
 
     /// (Async) Fetches a club from its tag.
     #[cfg(feature="async")]
-    async fn a_fetch(client: &Client, tag: String) -> Result<Club>
+    async fn a_fetch(client: &Client, tag: &'async_trait String) -> Result<Club>
         where Self: 'async_trait,
               Self::Property: 'async_trait,
     {
@@ -131,12 +144,32 @@ impl PropFetchable for Club {
 #[cfg(feature = "players")]
 impl FetchFrom<PlayerClub> for Club {
     fn fetch_from(client: &Client, p_club: PlayerClub) -> Result<Club> {
-        Club::fetch(client, p_club.tag)
+        Club::fetch(client, &p_club.tag)
     }
 
     #[cfg(feature = "async")]
     async fn a_fetch_from(client: &Client, p_club: PlayerClub) -> Result<Club> {
-        Club::a_fetch(client, p_club.tag.clone()).await
+        Club::a_fetch(client, &p_club.tag).await
+    }
+}
+
+#[cfg_attr(feature = "async", async_trait)]
+#[cfg(feature = "rankings")]
+impl FetchFrom<ClubRanking> for Club {
+
+    /// (Sync) Fetches a `Club` using data from a [`ClubRanking`] object.
+    ///
+    /// [`ClubRanking`]: ../../rankings/clubs/struct.ClubRanking.html
+    fn fetch_from(client: &Client, c_ranking: ClubRanking) -> Result<Club> {
+        Club::fetch(client, &c_ranking.tag)
+    }
+
+    /// (Async) Fetches a `Club` using data from a [`ClubRanking`] object.
+    ///
+    /// [`ClubRanking`]: ../../rankings/clubs/struct.ClubRanking.html
+    #[cfg(feature = "async")]
+    async fn a_fetch_from(client: &Client, c_ranking: ClubRanking) -> Result<Club> {
+        Club::a_fetch(client, &c_ranking.tag).await
     }
 }
 
@@ -144,13 +177,13 @@ impl FetchFrom<PlayerClub> for Club {
 ///
 /// [`ClubMember`]: ./struct.ClubMember.html
 #[non_exhaustive]
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ClubMemberRole {
-    Member,
-    Senior,
-    VicePresident,
-    President,
+    Member = 0,
+    Senior = 1,
+    VicePresident = 2,
+    President = 3,
 }
 
 impl Display for ClubMemberRole {
@@ -167,6 +200,46 @@ impl Display for ClubMemberRole {
     }
 }
 
+impl PartialOrd for ClubMemberRole {
+    /// Compares and determines which `ClubMemberRole` is higher in the hierarchy:
+    /// `Member < Senior < VicePresident < President`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use brawl_api::ClubMemberRole;
+    ///
+    /// // vice-president has more power (is higher in the hierarchy) than a normal Member
+    /// assert!(ClubMemberRole::Member < ClubMemberRole::VicePresident);
+    /// assert!(ClubMemberRole::President > ClubMemberRole::VicePresident);
+    /// assert!(ClubMemberRole::Senior > ClubMemberRole::Member);
+    /// assert!(ClubMemberRole::Member >= ClubMemberRole::Member);
+    /// ```
+    fn partial_cmp(&self, other: &ClubMemberRole) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for ClubMemberRole {
+    /// Compares and determines which `ClubMemberRole` is higher in the hierarchy:
+    /// `Member < Senior < VicePresident < President`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use brawl_api::ClubMemberRole;
+    ///
+    /// // vice-president has more power (is higher in the hierarchy) than a normal Member
+    /// assert!(ClubMemberRole::Member < ClubMemberRole::VicePresident);
+    /// assert!(ClubMemberRole::President > ClubMemberRole::VicePresident);
+    /// assert!(ClubMemberRole::Senior > ClubMemberRole::Member);
+    /// assert!(ClubMemberRole::Member >= ClubMemberRole::Member);
+    /// ```
+    fn cmp(&self, other: &ClubMemberRole) -> Ordering {
+        (*self as u8).cmp(&(*other as u8))
+    }
+}
+
 impl Default for ClubMemberRole {
     /// Defaults to [`ClubMemberRole::Member`].
     ///
@@ -178,7 +251,7 @@ impl Default for ClubMemberRole {
 /// (most importantly, its role). Use [`Player::fetch_from`] to fetch the full player data.
 ///
 /// [`ClubMember`]: ../players/player/struct.Player.html#method.fetch_from
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ClubMember {
 
     /// The member's tag.
@@ -204,6 +277,52 @@ pub struct ClubMember {
     #[serde(default = "oxffffff_default_usize")]
     #[serde(deserialize_with = "deserialize_number_from_string")]  // parse num
     pub name_color: usize
+}
+
+impl PartialOrd for ClubMember {
+    /// Compares and determines which `ClubMember` has a higher role.
+    ///
+    /// # Examples
+    ///
+    /// (**NOTE:** Club members are not meant to be initialized, but rather obtained from
+    /// a fetched [`Club`] instance. They are only instantiated here for this example.)
+    ///
+    /// ```rust
+    /// use brawl_api::{ClubMember, ClubMemberRole};
+    ///
+    /// let member_1 = ClubMember { role: ClubMemberRole::Member, ..ClubMember::default() };
+    /// let member_2 = ClubMember { role: ClubMemberRole::VicePresident, ..ClubMember::default() };
+    ///
+    /// assert!(member_1 < member_2)  // vice-president has more power than a normal Member
+    /// ```
+    ///
+    /// [`Club`]: struct.Club.html
+    fn partial_cmp(&self, other: &ClubMember) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for ClubMember {
+    /// Compares and determines which `ClubMember` has a higher role.
+    ///
+    /// # Examples
+    ///
+    /// (**NOTE:** Club members are not meant to be initialized, but rather obtained from
+    /// a fetched [`Club`] instance. They are only instantiated here for this example.)
+    ///
+    /// ```rust
+    /// use brawl_api::{ClubMember, ClubMemberRole};
+    ///
+    /// let member_1 = ClubMember { role: ClubMemberRole::Member, ..ClubMember::default() };
+    /// let member_2 = ClubMember { role: ClubMemberRole::VicePresident, ..ClubMember::default() };
+    ///
+    /// assert!(member_1 < member_2)  // vice-president has more power than a normal Member
+    /// ```
+    ///
+    /// [`Club`]: struct.Club.html
+    fn cmp(&self, other: &ClubMember) -> Ordering {
+        self.role.cmp(&other.role)
+    }
 }
 
 impl Default for ClubMember {

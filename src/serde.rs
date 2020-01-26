@@ -29,3 +29,9 @@ pub(crate) fn one_default<T>() -> T
     where T: PrimInt + FromStr,
           <T as FromStr>::Err: ::std::fmt::Debug
 { "1".parse().unwrap() }
+
+/// Obtains 0xffffff for an arbitrary number type.
+pub(crate) fn oxffffff_default<T>() -> T
+    where T: PrimInt + FromStr,
+          <T as FromStr>::Err: ::std::fmt::Debug
+{ "0xffffff".parse().unwrap() }

@@ -14,7 +14,15 @@ use crate::http::Client;
 
 /// Represents a list of a Player's most recent battles.
 /// (NOTE: It may take up to 30 minutes for a new battle to appear in the battlelog.)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+///
+/// Use [`BattleLog::fetch`] to fetch the battle logs for a given player tag.
+/// One may also [`BattleLog::fetch_from`] with an existing [`Player`] instance in order to use its
+/// tag.
+///
+/// [`BattleLog::fetch`]: #method.fetch
+/// [`BattleLog::fetch_from`]: #method.fetch_from
+/// [`Player`]: model/players/player/struct.Player.html
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BattleLog {
     /// The tag of the player whose BattleLog (most recent battles) was fetched.
     #[serde(skip)]  // artificial
@@ -50,29 +58,29 @@ impl PropFetchable for BattleLog {
     type Property = String;
 
     /// (Sync) Fetches a player's battlelog (most recent battles).
-    fn fetch(client: &Client, tag: String) -> Result<BattleLog> {
+    fn fetch(client: &Client, tag: &String) -> Result<BattleLog> {
         let route = Self::get_route(&tag);
         let mut battle_log = fetch_route::<BattleLog>(client, &route)?;
-        battle_log.tag = tag;
+        battle_log.tag = tag.clone();
         Ok(battle_log)
     }
 
     /// (Async) Fetches a player's battlelog (most recent battles).
     #[cfg(feature="async")]
-    async fn a_fetch(client: &Client, tag: String) -> Result<BattleLog>
+    async fn a_fetch(client: &Client, tag: &'async_trait String) -> Result<BattleLog>
         where Self: 'async_trait,
               Self::Property: 'async_trait,
     {
         let route = BattleLog::get_route(&tag);
         let mut battle_log = a_fetch_route::<BattleLog>(client, &route).await?;
-        battle_log.tag = tag;
+        battle_log.tag = tag.clone();
         Ok(battle_log)
     }
 }
 
 // endregion:BattleLog
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Battle {
     /// The time at which this battle occurred, in ISO format.
@@ -88,7 +96,7 @@ pub struct Battle {
     pub result: BattleResultInfo,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BattleEvent {
     /// The id of the event (an arbitrary number).
     #[serde(default)]
@@ -103,7 +111,26 @@ pub struct BattleEvent {
     pub map: String,
 }
 
+impl BattleEvent {
+    /// Returns a default BattleEvent - see [`BattleEvent::default`].
+    ///
+    /// [`BattleEvent::default`]: #method.default
+    pub fn new() -> BattleEvent { BattleEvent::default() }
+}
+
 impl Default for BattleEvent {
+    /// Returns a default BattleEvent, with all default values initialized.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use brawl_api::BattleEvent;
+    ///
+    /// assert_eq!(
+    ///     BattleEvent::default(),
+    ///     BattleEvent { id: 0, mode: String::from(""), map: String::from("") }
+    /// )
+    /// ```
     fn default() -> BattleEvent {
         BattleEvent {
             id: 0,
@@ -114,7 +141,7 @@ impl Default for BattleEvent {
 }
 
 #[non_exhaustive]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub enum BattleOutcome {
     Victory,
@@ -122,7 +149,7 @@ pub enum BattleOutcome {
     Draw,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BattleResultInfo {
     /// The event mode (e.g. "brawlBall", "soloShowdown"...). Should be the same as [`BattleEvent.mode`].
@@ -198,7 +225,7 @@ impl Default for BattleResultInfo {
 /// [`BattleResultInfo`]: ./struct.BattleResult.html
 /// [`Player`]: ../player/struct.Player.html
 /// [`Player::fetch_from`]: ../player/struct.Player.html#method.fetch_from
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BattlePlayer {
     /// The player's tag.
     #[serde(default)]
@@ -226,7 +253,7 @@ impl Default for BattlePlayer {
 /// Represents the brawler a player was using in a [`BattlePlayer`] object.
 ///
 /// [`BattlePlayer`]: ./struct.BattlePlayer.html
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BattleBrawler {
     /// The brawler's id (an arbitrary number).
     #[serde(default)]

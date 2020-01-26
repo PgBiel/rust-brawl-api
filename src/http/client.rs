@@ -13,6 +13,7 @@ use crate::constants::USER_AGENT as BRAWL_USER_AGENT;
 use crate::http::request::Request;
 use crate::error::Result;
 
+#[derive(Debug, Clone)]
 pub struct Client {
     pub auth_key: String,
     pub(crate) inner: ReqClient,

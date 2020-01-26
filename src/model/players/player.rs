@@ -18,6 +18,7 @@ use crate::error::{Result};
 
 #[cfg(feature = "clubs")]
 use super::super::clubs::ClubMember;
+
 use crate::http::Client;
 use crate::http::routes::Route;
 use crate::util::{auto_hashtag, fetch_route};
@@ -27,11 +28,14 @@ use num_traits::PrimInt;
 use std::str::FromStr;
 use crate::model::players::battlelog::{BattlePlayer};
 
+#[cfg(feature = "rankings")]
+use crate::PlayerRanking;
+
 /// A struct representing a Brawl Stars player, with all of its data.
 /// Use [`Player::fetch`] to fetch one based on tag.
 ///
 /// [`Player::fetch`]: ./struct.Player.html#method.fetch
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Player {
 
@@ -166,48 +170,68 @@ impl GetFetchProp for Player {
 }  // PropFetchable is automatically implemented
 
 #[cfg_attr(feature = "async", async_trait)]
-#[cfg(feature = "clubs")]
-impl FetchFrom<ClubMember> for Player {
-    fn fetch_from(client: &Client, member: ClubMember) -> Result<Player> {
-        Player::fetch(client, member.tag)
-    }
-
-    #[cfg(feature = "async")]
-    async fn a_fetch_from(client: &Client, member: ClubMember) -> Result<Player> {
-        Player::a_fetch(client, member.tag.clone()).await
-    }
-}
-
-#[cfg_attr(feature = "async", async_trait)]
-impl FetchFrom<BattlePlayer> for Player {
-    fn fetch_from(client: &Client, b_player: BattlePlayer) -> Result<Player> {
-        Player::fetch(client, b_player.tag)
-    }
-
-    #[cfg(feature = "async")]
-    async fn a_fetch_from(client: &Client, b_player: BattlePlayer) -> Result<Player> {
-        Player::a_fetch(client, b_player.tag.clone()).await
-    }
-}
-
-#[cfg_attr(feature = "async", async_trait)]
 impl PropFetchable for Player {
     type Property = String;
 
     /// (Sync) Fetches a player from its tag.
-    fn fetch(client: &Client, tag: String) -> Result<Player> {
+    fn fetch(client: &Client, tag: &String) -> Result<Player> {
         let route = Self::get_route(&tag);
         fetch_route::<Player>(client, &route)
     }
 
     /// (Async) Fetches a player from its tag.
     #[cfg(feature="async")]
-    async fn a_fetch(client: &Client, tag: String) -> Result<Player>
+    async fn a_fetch(client: &Client, tag: &'async_trait String) -> Result<Player>
         where Self: 'async_trait,
               Self::Property: 'async_trait,
     {
         let route = Player::get_route(&tag);
         a_fetch_route::<Player>(client, &route).await
+    }
+}
+
+#[cfg_attr(feature = "async", async_trait)]
+#[cfg(feature = "clubs")]
+impl FetchFrom<ClubMember> for Player {
+    fn fetch_from(client: &Client, member: ClubMember) -> Result<Player> {
+        Player::fetch(client, &member.tag)
+    }
+
+    #[cfg(feature = "async")]
+    async fn a_fetch_from(client: &Client, member: ClubMember) -> Result<Player> {
+        Player::a_fetch(client, &member.tag).await
+    }
+}
+
+#[cfg_attr(feature = "async", async_trait)]
+impl FetchFrom<BattlePlayer> for Player {
+    fn fetch_from(client: &Client, b_player: BattlePlayer) -> Result<Player> {
+        Player::fetch(client, &b_player.tag)
+    }
+
+    #[cfg(feature = "async")]
+    async fn a_fetch_from(client: &Client, b_player: BattlePlayer) -> Result<Player> {
+        Player::a_fetch(client, &b_player.tag).await
+    }
+}
+
+#[cfg_attr(feature = "async", async_trait)]
+#[cfg(feature = "rankings")]
+impl FetchFrom<PlayerRanking> for Player {
+
+    /// (Sync) Fetches a `Player` using data from a [`PlayerRanking`] object.
+    ///
+    /// [`PlayerRanking`]: ../../rankings/players/struct.PlayerRanking.html
+    fn fetch_from(client: &Client, p_ranking: PlayerRanking) -> Result<Player> {
+        Player::fetch(client, &p_ranking.tag)
+    }
+
+    /// (Async) Fetches a `Player` using data from a [`PlayerRanking`] object.
+    ///
+    /// [`PlayerRanking`]: ../../rankings/players/struct.PlayerRanking.html
+    #[cfg(feature = "async")]
+    async fn a_fetch_from(client: &Client, p_ranking: PlayerRanking) -> Result<Player> {
+        Player::a_fetch(client, &p_ranking.tag).await
     }
 }
 
@@ -218,7 +242,7 @@ impl PropFetchable for Player {
 ///
 /// [`Player.club`]: ./struct.Player.html#structfield.club
 /// [`Club::fetch_from`]: ../clubs/struct.Club.html#method.fetch_from
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PlayerClub {
 
     /// The club's tag.
@@ -244,7 +268,7 @@ impl Default for PlayerClub {
 /// A struct containing information about a player's brawler (see [`Player.brawlers`]).
 ///
 /// [`Player.brawlers`]: ./struct.Player.html#structfield.brawlers
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlayerBrawlerStat {
 
@@ -297,7 +321,7 @@ impl Default for PlayerBrawlerStat {
 }
 
 /// A struct representing a brawler's star power.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct StarPower {
 
     /// The star power name.

@@ -22,7 +22,7 @@ use crate::constants::USER_AGENT as B_API_USER_AGENT;
 
 
 /// A struct representing a request to some endpoint.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Request<'a> {
 
     /// The body of the request. (Note that this is rarely, if ever, used in this lib.)

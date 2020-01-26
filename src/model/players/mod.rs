@@ -1,4 +1,4 @@
-mod player;
+pub mod player;
 pub use player::*;
 
 pub mod battlelog;

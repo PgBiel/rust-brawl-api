@@ -3,7 +3,7 @@ use crate::b_api_concat;
 
 /// An enum representing the possible Brawl API routes.
 #[non_exhaustive]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum Route {
     /// Route for the `/players/:tag` endpoint. (`tag` must begin with a `#` (`%23`) for correct
     /// results.)
@@ -23,11 +23,29 @@ pub enum Route {
     /// This fetches a club's data.
     Club(String),
 
-    ///  Route for the `/clubs/:tag/members` endpoint.
+    /// Route for the `/clubs/:tag/members` endpoint.
     /// (`tag` must begin with a `#` (`%23`) for correct results.)
     ///
     /// This fetches a club's members.
     ClubMembers(String),
+
+    /// Route for the `/rankings/:country_code/players?limit=x` endpoint.
+    ///
+    /// The limit can be up to 200. Specifying higher than that simply works the same way as
+    /// specifying 200, thus returning up to 200 entries.
+    PlayerRankings {
+        country_code: String,
+        limit: u8,
+    },
+
+    /// Route for the `/rankings/:country_code/clubs?limit=x` endpoint.
+    ///
+    /// The limit can be up to 200. Specifying higher than that simply works the same way as
+    /// specifying 200, thus returning up to 200 entries.
+    ClubRankings {
+        country_code: String,
+        limit: u8,
+    },
 }
 
 impl Route {
@@ -49,13 +67,27 @@ impl Route {
             Route::Player(ref s) => format!("{}{}", b_api_concat!("/players/"), s),
 
             Route::PlayerBattlelogs(ref s) => format!(
-                "{}{}{}", b_api_concat!("/players/"), s, "/battlelog"
+                "{}{}/battlelog", b_api_concat!("/players/"), s
             ),
 
             Route::Club(ref s) => format!("{}{}", b_api_concat!("/clubs/"), s),
 
             Route::ClubMembers(ref s) => format!(
-                "{}{}{}", b_api_concat!("/clubs/"), s, "/members"
+                "{}{}/members", b_api_concat!("/clubs/"), s
+            ),
+
+            Route::PlayerRankings {
+                ref country_code,
+                limit
+            } => format!(
+                "{}{}/players?limit={}", b_api_concat!("/rankings/"), country_code, limit
+            ),
+
+            Route::ClubRankings {
+                ref country_code,
+                limit
+            } => format!(
+                "{}{}/clubs?limit={}", b_api_concat!("/rankings/"), country_code, limit
             ),
         }
     }
