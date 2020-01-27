@@ -1,4 +1,16 @@
+#![doc(hidden)]
 /// Concats string(s) to the main API URI.
+///
+/// # Examples
+///
+/// ```rust
+/// use brawl_api::b_api_concat;
+///
+/// assert_eq!(
+///     b_api_concat!("players/"),
+///     "https://api.brawlstars.com/v1/players/"
+/// )
+/// ```
 #[macro_export]
 macro_rules! b_api_concat {
     ($($s:expr),*) => {
@@ -9,7 +21,7 @@ macro_rules! b_api_concat {
 /// Constructs any Map<Key, Value> type, based on an initializer expression.
 ///
 /// # Examples
-/// ```rs
+/// ```rust,ignore
 /// let custom_map = map_build!{
 ///     MyMap::new();
 ///     "key" => "val",

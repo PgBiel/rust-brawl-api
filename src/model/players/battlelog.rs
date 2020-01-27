@@ -1,5 +1,8 @@
+//! Contains models related to the `/players/:tag/battlelog` endpoint of the Brawl Stars API.
+//! Included by the feature `"players"`; removing that feature will disable the usage of this module.
+
 use std::ops::Deref;
-use crate::traits::{GetFetchProp, PropFetchable};
+use crate::traits::{GetFetchProp, PropFetchable, FetchFrom};
 use crate::http::routes::Route;
 use crate::util::{fetch_route, a_fetch_route};
 use serde::{self, Serialize, Deserialize};
@@ -9,6 +12,8 @@ use crate::serde::one_default;
 #[cfg(feature = "async")]
 use async_trait::async_trait;
 use crate::http::Client;
+
+use super::Player;
 
 // region:BattleLog
 
@@ -36,50 +41,195 @@ pub struct BattleLog {
 impl Deref for BattleLog {
     type Target = Vec<Battle>;
 
+    /// Obtain the player's battles - dereferencing returns the [`items`] field.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// use brawl_api::{Client, BattleLog, traits::*};
+    ///
+    /// # fn main() -> Result<(), Box<dyn ::std::error::Error>> {
+    /// let client = Client::new("my auth token");
+    /// let battlelog = BattleLog::fetch(
+    ///     &client,            // <- the client containing the auth key
+    ///     "#PLAYER_TAG_HERE"  // <- the player whose battlelog should be fetched
+    /// )?;
+    ///
+    /// assert_eq!(battlelog.items, *battlelog);
+    ///
+    /// #     Ok(())
+    /// # }
+    ///
+    /// ```
+    ///
+    /// [`items`]: #structfield.items
     fn deref(&self) -> &Vec<Battle> {
         &self.items
     }
 }
 
 impl GetFetchProp for BattleLog {
-    type Property = String;
+    type Property = str;
 
-    fn get_fetch_prop(&self) -> &String {
-        &self.tag
+    fn get_fetch_prop(&self) -> &str {
+        &*self.tag
     }
 
-    fn get_route(tag: &String) -> Route {
-        Route::PlayerBattlelogs(tag.clone())
+    fn get_route(tag: &str) -> Route {
+        Route::PlayerBattlelogs(tag.to_owned())
+    }
+}
+
+#[cfg_attr(feature = "async", async_trait)]
+impl FetchFrom<Player> for BattleLog {
+    /// (Sync) Fetches a given player's battlelog (a `BattleLog` instance) by using data from
+    /// an existing [`Player`] instance. (See [`BattleLog::fetch`] for more details.)
+    ///
+    /// Note that this is simply to minimize efforts when a player was already fetched. If
+    /// no `Player` instance was previously present, it is recommended to simply `BattleLog::fetch`
+    /// with the specific player's tag.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// use brawl_api::{Client, Player, BattleLog, traits::*};
+    ///
+    /// # fn main() -> Result<(), Box<dyn ::std::error::Error>> {
+    /// let my_client = Client::new("my auth token");
+    /// let player = Player::fetch(&my_client, "#PLAYERTAGHERE")?;
+    /// // do stuff with player...
+    /// let player_battlelog = BattleLog::fetch_from(&my_client, &player)?;
+    /// // now you have player's battlelog
+    ///
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// [`Player`]: ../player/struct.Player.html
+    /// [`BattleLog::fetch`]: #method.fetch
+    fn fetch_from(client: &Client, player: &Player) -> Result<BattleLog> {
+        BattleLog::fetch(client, &player.tag)
+    }
+
+    /// (Async) Fetches a given player's battlelog (a `BattleLog` instance) by using data from
+    /// an existing [`Player`] instance. (See [`BattleLog::fetch`] for more details.)
+    ///
+    /// Note that this is simply to minimize efforts when a player was already fetched. If
+    /// no `Player` instance was previously present, it is recommended to simply `BattleLog::fetch`
+    /// with the specific player's tag.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// use brawl_api::{Client, Player, BattleLog, traits::*};
+    ///
+    /// # async fn main() -> Result<(), Box<dyn ::std::error::Error>> {
+    /// let my_client = Client::new("my auth token");
+    /// let player = Player::a_fetch(&my_client, "#PLAYERTAGHERE").await?;
+    /// // do stuff with player...
+    /// let player_battlelog = BattleLog::a_fetch_from(&my_client, &player).await?;
+    /// // now you have player's battlelog
+    ///
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// [`Player`]: ../player/struct.Player.html
+    /// [`BattleLog::fetch`]: #method.fetch
+    #[cfg(feature = "async")]
+    async fn a_fetch_from(client: &Client, player: &Player) -> Result<BattleLog> {
+        BattleLog::a_fetch(client, &player.tag).await
     }
 }
 
 #[cfg_attr(feature = "async", async_trait)]
 impl PropFetchable for BattleLog {
-    type Property = String;
+    type Property = str;
 
-    /// (Sync) Fetches a player's battlelog (most recent battles).
-    fn fetch(client: &Client, tag: &String) -> Result<BattleLog> {
-        let route = Self::get_route(&tag);
+    /// (Sync) Fetches a player's battlelog (most recent battles), given its tag.
+    ///
+    /// # Errors
+    ///
+    /// This function may error:
+    /// - While requesting (will return an [`Error::Request`]);
+    /// - After receiving a bad status code (API or other error - returns an [`Error::Status`]);
+    /// - After a ratelimit is indicated by the API, while also specifying when it is lifted ([`Error::Ratelimited`]);
+    /// - While parsing incoming JSON (will return an [`Error::Json`]).
+    ///
+    /// (All of those, of course, wrapped inside an `Err`.)
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// use brawl_api::{Client, Player, BattleLog, traits::*};
+    ///
+    /// # fn main() -> Result<(), Box<dyn ::std::error::Error>> {
+    /// let my_client = Client::new("my auth token");
+    /// let player_battlelog = BattleLog::fetch(&my_client, "#PLAYERTAGHERE")?;
+    /// // now you have the battlelog of the player with the given tag.
+    ///
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// [`Error::Request`]: error/enum.Error.html#variant.Request
+    /// [`Error::Status`]: error/enum.Error.html#variant.Status
+    /// [`Error::Ratelimited`]: error/enum.Error.html#variant.Ratelimited
+    /// [`Error::Json`]: error/enum.Error.html#variant.Json
+    fn fetch(client: &Client, tag: &str) -> Result<BattleLog> {
+        let route = Self::get_route(tag);
         let mut battle_log = fetch_route::<BattleLog>(client, &route)?;
-        battle_log.tag = tag.clone();
+        battle_log.tag = tag.to_owned();
         Ok(battle_log)
     }
 
-    /// (Async) Fetches a player's battlelog (most recent battles).
+    /// (Async) Fetches a player's battlelog (most recent battles), given its tag.
+    ///
+    /// # Errors
+    ///
+    /// This function may error:
+    /// - While requesting (will return an [`Error::Request`]);
+    /// - After receiving a bad status code (API or other error - returns an [`Error::Status`]);
+    /// - After a ratelimit is indicated by the API, while also specifying when it is lifted ([`Error::Ratelimited`]);
+    /// - While parsing incoming JSON (will return an [`Error::Json`]).
+    ///
+    /// (All of those, of course, wrapped inside an `Err`.)
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// use brawl_api::{Client, Player, BattleLog, traits::*};
+    ///
+    /// # async fn main() -> Result<(), Box<dyn ::std::error::Error>> {
+    /// let my_client = Client::new("my auth token");
+    /// let player_battlelog = BattleLog::a_fetch(&my_client, "#PLAYERTAGHERE").await?;
+    /// // now you have the battlelog of the player with the given tag.
+    ///
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// [`Error::Request`]: error/enum.Error.html#variant.Request
+    /// [`Error::Status`]: error/enum.Error.html#variant.Status
+    /// [`Error::Ratelimited`]: error/enum.Error.html#variant.Ratelimited
+    /// [`Error::Json`]: error/enum.Error.html#variant.Json
     #[cfg(feature="async")]
-    async fn a_fetch(client: &Client, tag: &'async_trait String) -> Result<BattleLog>
+    async fn a_fetch(client: &Client, tag: &'async_trait str) -> Result<BattleLog>
         where Self: 'async_trait,
               Self::Property: 'async_trait,
     {
-        let route = BattleLog::get_route(&tag);
+        let route = BattleLog::get_route(tag);
         let mut battle_log = a_fetch_route::<BattleLog>(client, &route).await?;
-        battle_log.tag = tag.clone();
+        battle_log.tag = tag.to_owned();
         Ok(battle_log)
     }
 }
 
 // endregion:BattleLog
 
+/// Represents a Battle in a player's [`BattleLog`].
+///
+/// [`BattleLog`]: struct.BattleLog.html
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Battle {
@@ -96,6 +246,36 @@ pub struct Battle {
     pub result: BattleResultInfo,
 }
 
+impl Default for Battle {
+
+    /// Returns a default `Battle` instance, with all default values initialized.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use brawl_api::{Battle, BattleEvent, BattleResultInfo};
+    ///
+    /// assert_eq!(
+    ///     Battle::default(),
+    ///     Battle {
+    ///         battle_time: String::from(""),
+    ///         event: BattleEvent::default(),
+    ///         result: BattleResultInfo::default()
+    ///     }
+    /// )
+    /// ```
+    fn default() -> Battle {
+        Battle {
+            battle_time: String::from(""),
+            event: BattleEvent::default(),
+            result: BattleResultInfo::default()
+        }
+    }
+}
+
+/// Contains data about the event played during a [`Battle`].
+///
+/// [`Battle`]: struct.Battle.html
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BattleEvent {
     /// The id of the event (an arbitrary number).
@@ -119,7 +299,7 @@ impl BattleEvent {
 }
 
 impl Default for BattleEvent {
-    /// Returns a default BattleEvent, with all default values initialized.
+    /// Returns a default `BattleEvent` instance, with all default values initialized.
     ///
     /// # Examples
     ///
@@ -149,6 +329,24 @@ pub enum BattleOutcome {
     Draw,
 }
 
+impl ::std::fmt::Display for BattleOutcome {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match *self {
+                BattleOutcome::Victory => "Victory",
+                BattleOutcome::Defeat => "Defeat",
+                BattleOutcome::Draw => "Draw",
+            }
+        )
+    }
+}
+
+/// Represents the result of a battle in a [`Battle`] object, including details, outcome,
+/// players/teams etc.
+///
+/// [`Battle`]: struct.Battle.html
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BattleResultInfo {
@@ -201,6 +399,28 @@ pub struct BattleResultInfo {
 }
 
 impl Default for BattleResultInfo {
+    /// Returns an instance of `BattleResultInfo` with initial values.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use brawl_api::BattleResultInfo;
+    ///
+    /// assert_eq!(
+    ///     BattleResultInfo::default(),
+    ///     BattleResultInfo {
+    ///         mode: String::from(""),
+    ///         battle_type: String::from(""),
+    ///         duration: 0,
+    ///         trophy_change: 0,
+    ///         rank: None,
+    ///         star_player: None,
+    ///         result: None,
+    ///         teams: None,
+    ///         players: None,
+    ///     }
+    /// );
+    /// ```
     fn default() -> BattleResultInfo {
         BattleResultInfo {
             mode: String::from(""),
@@ -241,6 +461,22 @@ pub struct BattlePlayer {
 }
 
 impl Default for BattlePlayer {
+    /// Returns an instance of `BattlePlayer` with initial values.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use brawl_api::{BattlePlayer, BattleBrawler};
+    ///
+    /// assert_eq!(
+    ///     BattlePlayer::default(),
+    ///     BattlePlayer {
+    ///         tag: String::from(""),
+    ///         name: String::from(""),
+    ///         brawler: BattleBrawler::default(),
+    ///     }
+    /// );
+    /// ```
     fn default() -> BattlePlayer {
         BattlePlayer {
             tag: String::from(""),
@@ -272,6 +508,23 @@ pub struct BattleBrawler {
 }
 
 impl Default for BattleBrawler {
+    /// Returns an instance of `BattleBrawler` with initial values.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use brawl_api::BattleBrawler;
+    ///
+    /// assert_eq!(
+    ///     BattleBrawler::default(),
+    ///     BattleBrawler {
+    ///         id: 0,
+    ///         name: String::from(""),
+    ///         power: 1,
+    ///         trophies: 0,
+    ///     }
+    /// );
+    /// ```
     fn default() -> BattleBrawler {
         BattleBrawler {
             id: 0,

@@ -1,3 +1,5 @@
+//! Contains the `Error` enum, used in all functions of the library that may error (fetches).
+
 use std::result::Result as StdResult;
 use std::error::Error as StdError;
 
@@ -16,7 +18,8 @@ use crate::util::JsonMap;
 /// Represents a `brawl-api` Result type.
 pub type Result<T> = StdResult<T, Error>;
 
-/// Represents all possible errors while using methods from this lib (`brawl-api`).
+/// Represents all possible errors while using methods from this lib (`brawl-api`) in functions
+/// such as fetches.
 #[non_exhaustive]
 #[derive(Debug)]
 pub enum Error {
@@ -52,8 +55,8 @@ pub enum Error {
         time_until_reset: Option<String>,
     },
 
-    /// Represents a JSON decoding error, with a description and the offending value.
-    Decode(&'static str, JsonValue),
+//    /// Represents a JSON decoding error, with a description and the offending value.
+//    Decode(&'static str, JsonValue),  // Could have use in the future if the api adds POST
 
     /// Represents an arbitrary status code error received from the API.
     /// E.g. 400, 403, 404, 429, 500, 503
@@ -184,7 +187,7 @@ impl Error {
 
             Error::Request(ref e) => String::from(e.description()),
 
-            Error::Decode(msg, _) => String::from(msg),
+//            Error::Decode(msg, _) => String::from(msg),
 
             Error::Status(ref status, _, _) => String::from(
                 status.canonical_reason().unwrap_or(

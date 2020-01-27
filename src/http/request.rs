@@ -1,3 +1,5 @@
+//! Contains the `Request` class, used for building requests to the API.
+
 use reqwest::blocking::{
     RequestBuilder
 };
@@ -39,6 +41,24 @@ pub struct Request<'a> {
 }
 
 impl<'a> Default for Request<'a> {
+    /// Returns a default `Request` instance, with initial values.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use brawl_api::http::request::Request;
+    /// use reqwest::Method;
+    ///
+    /// assert_eq!(
+    ///     Request::default(),
+    ///     Request {
+    ///         body: None,
+    ///         headers: None,
+    ///         endpoint: String::from(""),
+    ///         method: Method::GET,
+    ///     }
+    /// )
+    /// ```
     fn default() -> Request<'a> {
         Request {
             body: None,
@@ -51,7 +71,9 @@ impl<'a> Default for Request<'a> {
 
 // (Credits to Serenity lib for the useful HTTP bases)
 impl<'a> Request<'a> {
-    /// (For sync usage) Creates a (blocking) RequestBuilder (`reqwest` crate) instance.
+    /// (For sync usage) Creates a (blocking) [`RequestBuilder`] (`reqwest` crate) instance.
+    ///
+    /// [`RequestBuilder`]: https://docs.rs/reqwest/*/reqwest/blocking/struct.RequestBuilder.html
     pub fn build(&'a self, client: &Client) -> Result<RequestBuilder> {
         let Request {
             body,
@@ -94,7 +116,9 @@ impl<'a> Request<'a> {
         Ok(builder)
     }
 
-    /// (For async usage) Creates a (non-blocking) RequestBuilder (`reqwest` crate) instance.
+    /// (For async usage) Creates a (non-blocking) [`RequestBuilder`] (`reqwest` crate) instance.
+    ///
+    /// [`RequestBuilder`]: https://docs.rs/reqwest/*/reqwest/struct.RequestBuilder.html
     #[cfg(feature = "async")]
     pub fn a_build(&'a self, client: &Client) -> Result<ARequestBuilder> {
         let Request {
@@ -119,7 +143,7 @@ impl<'a> Request<'a> {
         let key = if key.starts_with("Bearer ") {
             key.clone()
         } else {
-            format!("Bearer {}", key)
+            format!("Bearer {}", key)  // add "Bearer " if missing.
         };
 
         let mut headers = HeaderMap::with_capacity(3);

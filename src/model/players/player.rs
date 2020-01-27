@@ -1,5 +1,5 @@
-//! Models for the 'players/' API endpoint.
-//! Included by the feature 'players'; removing that feature will disable the usage of this module.
+//! Models for the `players/:tag` API endpoint.
+//! Included by the feature `"players"`; removing that feature will disable the usage of this module.
 
 use serde::{self, Serialize, Deserialize};
 
@@ -22,18 +22,21 @@ use super::super::clubs::ClubMember;
 use crate::http::Client;
 use crate::http::routes::Route;
 use crate::util::{auto_hashtag, fetch_route};
-use crate::serde::deserialize_number_from_string;
+use crate::serde::{deserialize_number_from_string, one_default, oxffffff_default};
 
-use num_traits::PrimInt;
-use std::str::FromStr;
+
+
 use crate::model::players::battlelog::{BattlePlayer};
 
 #[cfg(feature = "rankings")]
 use crate::PlayerRanking;
 
 /// A struct representing a Brawl Stars player, with all of its data.
-/// Use [`Player::fetch`] to fetch one based on tag.
+/// Use [`Player::fetch`] to fetch one based on tag. (Make sure the [`PropFetchable`] trait
+/// is imported - in general, it is recommended to **at least** `use brawl_api::traits::*`, or,
+/// even, `use brawl_api::prelude::*` to bring the models into scope as well.)
 ///
+/// [`PropFetchable`]: traits/trait.PropFetchable.html
 /// [`Player::fetch`]: ./struct.Player.html#method.fetch
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -107,17 +110,11 @@ pub struct Player {
 
     /// The player's name color, as an integer (Default is 0xffffff = 16777215 - this is used
     /// when the data is not available).
-    #[serde(default = "oxffffff_default_usize")]
+    #[serde(default = "oxffffff_default")]
     #[serde(deserialize_with = "deserialize_number_from_string")]  // parse num
     pub name_color: usize,
 }
-
-fn one_default<T>() -> T
-    where T: PrimInt + FromStr,
-          <T as FromStr>::Err: ::std::fmt::Debug
-{ "1".parse().unwrap() }
 fn false_default() -> bool { false }
-fn oxffffff_default_usize() -> usize { 0xff_ff_ff }
 
 impl Default for Player {
     
@@ -162,26 +159,84 @@ impl Default for Player {
 }
 
 impl GetFetchProp for Player {
-    type Property = String;
+    type Property = str;
 
-    fn get_fetch_prop(&self) -> &String { &self.tag }
+    fn get_fetch_prop(&self) -> &str { &*self.tag }
 
-    fn get_route(tag: &String) -> Route { Route::Player(auto_hashtag(tag)) }
-}  // PropFetchable is automatically implemented
+    fn get_route(tag: &str) -> Route { Route::Player(auto_hashtag(tag)) }
+}
 
 #[cfg_attr(feature = "async", async_trait)]
 impl PropFetchable for Player {
-    type Property = String;
+    type Property = str;
 
     /// (Sync) Fetches a player from its tag.
-    fn fetch(client: &Client, tag: &String) -> Result<Player> {
-        let route = Self::get_route(&tag);
+    ///
+    /// # Errors
+    ///
+    /// This function may error:
+    /// - While requesting (will return an [`Error::Request`]);
+    /// - After receiving a bad status code (API or other error - returns an [`Error::Status`]);
+    /// - After a ratelimit is indicated by the API, while also specifying when it is lifted ([`Error::Ratelimited`]);
+    /// - While parsing incoming JSON (will return an [`Error::Json`]).
+    ///
+    /// (All of those, of course, wrapped inside an `Err`.)
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// use brawl_api::{Client, Player, traits::*};
+    ///
+    /// # fn main() -> Result<(), Box<dyn ::std::error::Error>> {
+    /// let my_client = Client::new("my auth token");
+    /// let player = Player::fetch(&my_client, "#PLAYERTAGHERE")?;
+    /// // now you have data for the given player.
+    ///
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// [`Error::Request`]: error/enum.Error.html#variant.Request
+    /// [`Error::Status`]: error/enum.Error.html#variant.Status
+    /// [`Error::Ratelimited`]: error/enum.Error.html#variant.Ratelimited
+    /// [`Error::Json`]: error/enum.Error.html#variant.Json
+    fn fetch(client: &Client, tag: &str) -> Result<Player> {
+        let route = Self::get_route(tag);
         fetch_route::<Player>(client, &route)
     }
 
     /// (Async) Fetches a player from its tag.
+    ///
+    /// # Errors
+    ///
+    /// This function may error:
+    /// - While requesting (will return an [`Error::Request`]);
+    /// - After receiving a bad status code (API or other error - returns an [`Error::Status`]);
+    /// - After a ratelimit is indicated by the API, while also specifying when it is lifted ([`Error::Ratelimited`]);
+    /// - While parsing incoming JSON (will return an [`Error::Json`]).
+    ///
+    /// (All of those, of course, wrapped inside an `Err`.)
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// use brawl_api::{Client, Player, traits::*};
+    ///
+    /// # async fn main() -> Result<(), Box<dyn ::std::error::Error>> {
+    /// let my_client = Client::new("my auth token");
+    /// let player = Player::a_fetch(&my_client, "#PLAYERTAGHERE").await?;
+    /// // now you have data for the given player.
+    ///
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// [`Error::Request`]: error/enum.Error.html#variant.Request
+    /// [`Error::Status`]: error/enum.Error.html#variant.Status
+    /// [`Error::Ratelimited`]: error/enum.Error.html#variant.Ratelimited
+    /// [`Error::Json`]: error/enum.Error.html#variant.Json
     #[cfg(feature="async")]
-    async fn a_fetch(client: &Client, tag: &'async_trait String) -> Result<Player>
+    async fn a_fetch(client: &Client, tag: &'async_trait str) -> Result<Player>
         where Self: 'async_trait,
               Self::Property: 'async_trait,
     {
@@ -193,24 +248,134 @@ impl PropFetchable for Player {
 #[cfg_attr(feature = "async", async_trait)]
 #[cfg(feature = "clubs")]
 impl FetchFrom<ClubMember> for Player {
-    fn fetch_from(client: &Client, member: ClubMember) -> Result<Player> {
+    /// (Sync) Fetches a `Player` instance, given a preexisting `ClubMember` instance.
+    ///
+    /// # Errors
+    ///
+    /// See [`Player::fetch`].
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// use brawl_api::{Client, Player, Club, traits::*};
+    ///
+    /// # fn main() -> Result<(), Box<dyn ::std::error::Error>> {
+    /// let my_client = Client::new("my auth token");
+    /// let club = Club::fetch(&my_client, "#CLUB_TAG_HERE")?;
+    /// let some_member = &club.members[0];
+    /// let some_player = Player::fetch_from(&my_client, some_member)?;
+    /// // now `some_member`'s full data, as a Player, is available for use.
+    ///
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// [`Player::fetch`]: struct.Player.html#method.fetch
+    fn fetch_from(client: &Client, member: &ClubMember) -> Result<Player> {
         Player::fetch(client, &member.tag)
     }
 
+    /// (Async) Fetches a `Player` instance, given a preexisting `ClubMember` instance.
+    ///
+    /// # Errors
+    ///
+    /// See [`Player::fetch`].
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// use brawl_api::{Client, Player, Club, traits::*};
+    ///
+    /// # async fn main() -> Result<(), Box<dyn ::std::error::Error>> {
+    /// let my_client = Client::new("my auth token");
+    /// let club = Club::a_fetch(&my_client, "#CLUB_TAG_HERE").await?;
+    /// let some_member = &club.members[0];
+    /// let some_player = Player::a_fetch_from(&my_client, some_member).await?;
+    /// // now `some_member`'s full data, as a Player, is available for use.
+    ///
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// [`Player::fetch`]: struct.Player.html#method.fetch
     #[cfg(feature = "async")]
-    async fn a_fetch_from(client: &Client, member: ClubMember) -> Result<Player> {
+    async fn a_fetch_from(client: &Client, member: &ClubMember) -> Result<Player> {
         Player::a_fetch(client, &member.tag).await
     }
 }
 
 #[cfg_attr(feature = "async", async_trait)]
 impl FetchFrom<BattlePlayer> for Player {
-    fn fetch_from(client: &Client, b_player: BattlePlayer) -> Result<Player> {
+    /// (Async) Fetches a `Player` instance, given a preexisting `BattlePlayer` instance.
+    ///
+    /// # Errors
+    ///
+    /// See [`Player::fetch`].
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// use brawl_api::{
+    ///     Client, Player, BattleLog, Battle, BattleResultInfo, BattlePlayer,
+    ///     traits::*
+    /// };
+    ///
+    /// # fn main() -> Result<(), Box<dyn ::std::error::Error>> {
+    /// let my_client = Client::new("my auth token");
+    /// let battlelog = BattleLog::fetch(&my_client, "#PLAYER_TAG_HERE")?;
+    /// let most_recent_battle: Option<&Battle> = battlelog.get(0);
+    ///
+    /// if let Some(battle) = most_recent_battle {
+    ///     if let Some(ref teams) = &battle.result.teams {
+    ///         let some_b_player: &BattlePlayer = &teams[0][0];
+    ///         let some_player = Player::fetch_from(&my_client, some_b_player)?;
+    ///         // now `some_b_player`'s full data, as a Player, is available for use.
+    ///     }
+    /// }
+    ///
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// [`Player::fetch`]: struct.Player.html#method.fetch
+    fn fetch_from(client: &Client, b_player: &BattlePlayer) -> Result<Player> {
         Player::fetch(client, &b_player.tag)
     }
 
+    /// (Async) Fetches a `Player` instance, given a preexisting `BattlePlayer` instance.
+    ///
+    /// # Errors
+    ///
+    /// See [`Player::fetch`].
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// use brawl_api::{
+    ///     Client, Player, BattleLog, Battle, BattleResultInfo, BattlePlayer,
+    ///     traits::*
+    /// };
+    ///
+    /// # async fn main() -> Result<(), Box<dyn ::std::error::Error>> {
+    /// let my_client = Client::new("my auth token");
+    /// let battlelog = BattleLog::a_fetch(&my_client, "#PLAYER_TAG_HERE").await?;
+    /// let most_recent_battle: Option<&Battle> = battlelog.get(0);
+    ///
+    /// if let Some(battle) = most_recent_battle {
+    ///     if let Some(ref teams) = &battle.result.teams {
+    ///         let some_b_player: &BattlePlayer = &teams[0][0];
+    ///         let some_player = Player::a_fetch_from(&my_client, some_b_player).await?;
+    ///         // now `some_b_player`'s full data, as a Player, is available for use.
+    ///     }
+    /// }
+    ///
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// [`Player::fetch`]: struct.Player.html#method.fetch
     #[cfg(feature = "async")]
-    async fn a_fetch_from(client: &Client, b_player: BattlePlayer) -> Result<Player> {
+    async fn a_fetch_from(client: &Client, b_player: &BattlePlayer) -> Result<Player> {
         Player::a_fetch(client, &b_player.tag).await
     }
 }
@@ -222,7 +387,7 @@ impl FetchFrom<PlayerRanking> for Player {
     /// (Sync) Fetches a `Player` using data from a [`PlayerRanking`] object.
     ///
     /// [`PlayerRanking`]: ../../rankings/players/struct.PlayerRanking.html
-    fn fetch_from(client: &Client, p_ranking: PlayerRanking) -> Result<Player> {
+    fn fetch_from(client: &Client, p_ranking: &PlayerRanking) -> Result<Player> {
         Player::fetch(client, &p_ranking.tag)
     }
 
@@ -230,7 +395,7 @@ impl FetchFrom<PlayerRanking> for Player {
     ///
     /// [`PlayerRanking`]: ../../rankings/players/struct.PlayerRanking.html
     #[cfg(feature = "async")]
-    async fn a_fetch_from(client: &Client, p_ranking: PlayerRanking) -> Result<Player> {
+    async fn a_fetch_from(client: &Client, p_ranking: &PlayerRanking) -> Result<Player> {
         Player::a_fetch(client, &p_ranking.tag).await
     }
 }
@@ -255,8 +420,22 @@ pub struct PlayerClub {
 }
 
 impl Default for PlayerClub {
-    
-    /// Initializes a new PlayerClub instance, with default values.
+
+    /// Returns an instance of `PlayerClub` with initial values.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use brawl_api::PlayerClub;
+    ///
+    /// assert_eq!(
+    ///     PlayerClub::default(),
+    ///     PlayerClub {
+    ///         tag: String::from(""),
+    ///         name: String::from(""),
+    ///     }
+    /// );
+    /// ```
     fn default() -> PlayerClub {
         PlayerClub {
             tag: String::from(""),
@@ -281,7 +460,7 @@ pub struct PlayerBrawlerStat {
 
     /// The brawler's id (an arbitrary number).
     #[serde(default)]  // zero
-    pub id: isize,
+    pub id: usize,
 
     /// The brawler's rank.
     #[serde(default = "one_default")]
@@ -334,8 +513,22 @@ pub struct StarPower {
 }
 
 impl Default for StarPower {
-    
-    /// Initializes a new StarPower instance, with default values.
+
+    /// Returns an instance of `StarPower` with initial values.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use brawl_api::StarPower;
+    ///
+    /// assert_eq!(
+    ///     StarPower::default(),
+    ///     StarPower {
+    ///         name: String::from(""),
+    ///         id: 0,
+    ///     }
+    /// );
+    /// ```
     fn default() -> StarPower {
         StarPower {
             name: String::from(""),

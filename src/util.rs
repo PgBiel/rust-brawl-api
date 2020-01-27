@@ -18,8 +18,8 @@ pub(crate) fn auto_hashtag(tag: &str) -> String {
     let mut new_tag = tag.to_owned();
     if tag.starts_with('#') {
         new_tag = new_tag.replacen("#", "%23", 1);
-    } else if cfg!(feature = "auto-hashtag") {  // automtically add the hashtag
-        new_tag = format!("%23{}", new_tag);
+    } else if cfg!(feature = "auto-hashtag") && !tag.starts_with("%23") {
+        new_tag = format!("%23{}", new_tag);  // automtically add the hashtag if missing
     }
     new_tag
 }

@@ -1,3 +1,6 @@
+//! Models for the `/club/:tag` Brawl Stars API endpoint.
+//! Included by the feature `"clubs"`; removing that feature will disable the usage of this module.
+
 #[cfg(feature = "async")]
 use async_trait::async_trait;
 
@@ -31,7 +34,15 @@ pub enum ClubType {
 }
 
 impl Default for ClubType {
-    /// Defaults to [`ClubType::Open`].
+    /// Defaults to [`ClubType::Open`] (new clubs start open).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use brawl_api::ClubType;
+    ///
+    /// assert_eq!(ClubType::default(), ClubType::Open);
+    /// ```
     ///
     /// [`ClubType::Open`]: ./enum.ClubType.html#variant.Open
     fn default() -> ClubType { ClubType::Open }
@@ -95,9 +106,28 @@ pub struct Club {
 fn oxffffff_default_usize() -> usize { 0xff_ff_ff }
 
 impl Default for Club {
-    
 
-    /// Initializes a new Club instance, with default values.
+
+    /// Returns an instance of `Club` with initial values.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use brawl_api::{Club, ClubType};
+    ///
+    /// assert_eq!(
+    ///     Club::default(),
+    ///     Club {
+    ///         tag: String::from(""),
+    ///         name: String::from(""),
+    ///         description: None,
+    ///         trophies: 0,
+    ///         required_trophies: 0,
+    ///         members: vec![],
+    ///         club_type: ClubType::Open,
+    ///     }
+    /// );
+    /// ```
     fn default() -> Club {
         Club {
             tag: String::from(""),
@@ -112,30 +142,30 @@ impl Default for Club {
 }
 
 impl GetFetchProp for Club {
-    type Property = String;
+    type Property = str;
 
-    fn get_fetch_prop(&self) -> &String { &self.tag }
+    fn get_fetch_prop(&self) -> &str { &self.tag }
 
-    fn get_route(tag: &String) -> Route { Route::Club(auto_hashtag(tag)) }
+    fn get_route(tag: &str) -> Route { Route::Club(auto_hashtag(tag)) }
 }
 
 #[cfg_attr(feature = "async", async_trait)]
 impl PropFetchable for Club {
-    type Property = String;
+    type Property = str;
 
     /// (Sync) Fetches a club from its tag.
-    fn fetch(client: &Client, tag: &String) -> Result<Club> {
-        let route = Club::get_route(&tag);
+    fn fetch(client: &Client, tag: &str) -> Result<Club> {
+        let route = Club::get_route(tag);
         fetch_route::<Club>(client, &route)
     }
 
     /// (Async) Fetches a club from its tag.
     #[cfg(feature="async")]
-    async fn a_fetch(client: &Client, tag: &'async_trait String) -> Result<Club>
+    async fn a_fetch(client: &Client, tag: &'async_trait str) -> Result<Club>
         where Self: 'async_trait,
               Self::Property: 'async_trait,
     {
-        let route = Club::get_route(&tag);
+        let route = Club::get_route(tag);
         a_fetch_route::<Club>(client, &route).await
     }
 }
@@ -143,12 +173,12 @@ impl PropFetchable for Club {
 #[cfg_attr(feature = "async", async_trait)]
 #[cfg(feature = "players")]
 impl FetchFrom<PlayerClub> for Club {
-    fn fetch_from(client: &Client, p_club: PlayerClub) -> Result<Club> {
+    fn fetch_from(client: &Client, p_club: &PlayerClub) -> Result<Club> {
         Club::fetch(client, &p_club.tag)
     }
 
     #[cfg(feature = "async")]
-    async fn a_fetch_from(client: &Client, p_club: PlayerClub) -> Result<Club> {
+    async fn a_fetch_from(client: &Client, p_club: &PlayerClub) -> Result<Club> {
         Club::a_fetch(client, &p_club.tag).await
     }
 }
@@ -160,7 +190,7 @@ impl FetchFrom<ClubRanking> for Club {
     /// (Sync) Fetches a `Club` using data from a [`ClubRanking`] object.
     ///
     /// [`ClubRanking`]: ../../rankings/clubs/struct.ClubRanking.html
-    fn fetch_from(client: &Client, c_ranking: ClubRanking) -> Result<Club> {
+    fn fetch_from(client: &Client, c_ranking: &ClubRanking) -> Result<Club> {
         Club::fetch(client, &c_ranking.tag)
     }
 
@@ -168,7 +198,7 @@ impl FetchFrom<ClubRanking> for Club {
     ///
     /// [`ClubRanking`]: ../../rankings/clubs/struct.ClubRanking.html
     #[cfg(feature = "async")]
-    async fn a_fetch_from(client: &Client, c_ranking: ClubRanking) -> Result<Club> {
+    async fn a_fetch_from(client: &Client, c_ranking: &ClubRanking) -> Result<Club> {
         Club::a_fetch(client, &c_ranking.tag).await
     }
 }
@@ -241,7 +271,16 @@ impl Ord for ClubMemberRole {
 }
 
 impl Default for ClubMemberRole {
-    /// Defaults to [`ClubMemberRole::Member`].
+    /// Defaults to [`ClubMemberRole::Member`] - that is the initial role that any club member
+    /// adquires after joining (it may be promoted later, though).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use brawl_api::ClubMemberRole;
+    ///
+    /// assert_eq!(ClubMemberRole::default(), ClubMemberRole::Member);
+    /// ```
     ///
     /// [`ClubMemberRole::Member`]: ./enum.ClubMemberRole.html#variant.Member
     fn default() -> ClubMemberRole { ClubMemberRole::Member }
@@ -326,13 +365,31 @@ impl Ord for ClubMember {
 }
 
 impl Default for ClubMember {
-    
+
+    /// Returns an instance of `ClubMember` with initial values.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use brawl_api::model::{ClubMember, ClubMemberRole};
+    ///
+    /// assert_eq!(
+    ///     ClubMember::default(),
+    ///     ClubMember {
+    ///         tag: String::from(""),
+    ///         name: String::from(""),
+    ///         trophies: 0,
+    ///         role: ClubMemberRole::default(),
+    ///         name_color: 0xff_ff_ff
+    ///     }
+    /// );
+    /// ```
     fn default() -> ClubMember {
         ClubMember {
             tag: String::from(""),
             name: String::from(""),
             trophies: 0,
-            role: ClubMemberRole::Member,
+            role: ClubMemberRole::default(),
             name_color: 0xff_ff_ff
         }
     }

@@ -1,3 +1,5 @@
+//! Contains the `Client` class, responsible for API authentication.
+
 use reqwest::blocking::{
     Client as ReqClient, ClientBuilder as ReqClientBuilder,
     RequestBuilder
@@ -22,8 +24,22 @@ pub struct Client {
     pub(crate) a_inner: AReqClient,
 }
 
+/// Represents an HTTP client which holds the user's API auth key, and is required on every fetch
+/// method for authentication. This is usually the starting point for using this library.
+///
+/// See the [`Client::new`] method to start.
+///
+/// [`Client::new`]: #method.new
 impl Client {
     /// Creates a new Client with a given API auth key.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use brawl_api::Client;
+    ///
+    /// let my_client = Client::new("my auth key");
+    /// ```
     pub fn new(auth_key: &str) -> Client {
         let inner_b: ReqClientBuilder = ReqClient::builder().user_agent(BRAWL_USER_AGENT);
 
@@ -39,12 +55,25 @@ impl Client {
         }
     }
 
+    /// (For sync usage) Provides an immutable reference to the [`inner`] field.
+    ///
+    /// [`inner`]: #structfield.inner
     pub fn inner(&self) -> &ReqClient { &self.inner }
-    pub fn inner_mut(&mut self) -> &mut ReqClient {&mut self.inner}
 
+    /// (For sync usage) Provides a mutable reference to the [`inner`] field.
+    ///
+    /// [`inner`]: #structfield.inner
+    pub fn inner_mut(&mut self) -> &mut ReqClient { &mut self.inner }
+
+    /// (For async usage) Provides an immutable reference to the [`a_inner`] field.
+    ///
+    /// [`a_inner`]: #structfield.a_inner
     #[cfg(feature = "async")]
     pub fn a_inner(&self) -> &AReqClient { &self.a_inner }
 
+    /// (For async usage) Provides a mutable reference to the [`a_inner`] field.
+    ///
+    /// [`a_inner`]: #structfield.a_inner
     #[cfg(feature = "async")]
     pub fn a_inner_mut(&mut self) -> &mut AReqClient { &mut self.a_inner }
 
@@ -58,7 +87,7 @@ impl Client {
     /// (For sync usage) Creates a Request instance for one specific endpoint and calls
     /// [`Request::build`] on the newly-made instance, returning a (blocking) `RequestBuilder`.
     /// (GET)
-    pub fn build_endpoint_get(&self, endpoint: &str) -> Result<RequestBuilder> {
+    pub(crate) fn build_endpoint_get(&self, endpoint: &str) -> Result<RequestBuilder> {
         self.endpoint_request(endpoint).build(&self)
     }
 
@@ -66,7 +95,7 @@ impl Client {
     /// [`Request::build`] on the newly-made instance, returning a (non-blocking) `RequestBuilder`.
     /// (GET)
     #[cfg(feature = "async")]
-    pub fn a_build_endpoint_get(&self, endpoint: &str) -> Result<ARequestBuilder> {
+    pub(crate) fn a_build_endpoint_get(&self, endpoint: &str) -> Result<ARequestBuilder> {
         self.endpoint_request(endpoint).a_build(&self)
     }
 }

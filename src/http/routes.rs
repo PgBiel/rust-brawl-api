@@ -1,3 +1,6 @@
+//! Contains the `Route` enum, responsible for listing the available API endpoints and parsing
+//! the given values into a valid URL.
+
 use crate::b_api_concat;
 
 
@@ -29,12 +32,17 @@ pub enum Route {
     /// This fetches a club's members.
     ClubMembers(String),
 
-    /// Route for the `/rankings/:country_code/players?limit=x` endpoint.
+    /// Route for the `/rankings/:country_code/players?limit=x` endpoint (shows the top `x` players
+    /// with most trophies in said country code).
     ///
     /// The limit can be up to 200. Specifying higher than that simply works the same way as
     /// specifying 200, thus returning up to 200 entries.
     PlayerRankings {
+        /// The two-letter country code whose leaderboard should be fetched (e.g. BR for Brazil,
+        /// ZW for Zimbabwe...), or `"global"` for the global leaderboard.
         country_code: String,
+
+        /// The limit of rankings to get (i.e., to get the top `limit` players, sorted by trophies).
         limit: u8,
     },
 
@@ -43,7 +51,29 @@ pub enum Route {
     /// The limit can be up to 200. Specifying higher than that simply works the same way as
     /// specifying 200, thus returning up to 200 entries.
     ClubRankings {
+        /// The two-letter country code whose leaderboard should be fetched (e.g. BR for Brazil,
+        /// ZW for Zimbabwe...), or `"global"` for the global leaderboard.
         country_code: String,
+
+        /// The limit of rankings to get (i.e., to get the top `limit` clubs, sorted by trophies).
+        limit: u8,
+    },
+
+    /// Route for the `/rankings/:country_code/brawlers/:brawler_id?limit=x` endpoint.
+    ///
+    /// The limit can be up to 200. Specifying higher than that simply works the same way as
+    /// specifying 200, thus returning up to 200 entries.
+    BrawlerRankings {
+        /// The two-letter country code whose leaderboard should be fetched (e.g. BR for Brazil,
+        /// ZW for Zimbabwe...), or `"global"` for the global leaderboard.
+        country_code: String,
+
+        /// The ID of the brawler whose rankings should be fetched. To obtain this,
+        /// use the `/brawlers/` endpoint.
+        brawler_id: usize,
+
+        /// The limit of rankings to get (i.e., to get the top `limit` players, sorted by trophies
+        /// on this specific brawler).
         limit: u8,
     },
 }
@@ -64,30 +94,39 @@ impl Route {
     /// ```
     pub fn to_url_str(&self) -> String {
         match self {
-            Route::Player(ref s) => format!("{}{}", b_api_concat!("/players/"), s),
+            Route::Player(ref s) => format!("{}{}", b_api_concat!("players/"), s),
 
             Route::PlayerBattlelogs(ref s) => format!(
-                "{}{}/battlelog", b_api_concat!("/players/"), s
+                "{}{}/battlelog", b_api_concat!("players/"), s
             ),
 
-            Route::Club(ref s) => format!("{}{}", b_api_concat!("/clubs/"), s),
+            Route::Club(ref s) => format!("{}{}", b_api_concat!("clubs/"), s),
 
             Route::ClubMembers(ref s) => format!(
-                "{}{}/members", b_api_concat!("/clubs/"), s
+                "{}{}/members", b_api_concat!("clubs/"), s
             ),
 
             Route::PlayerRankings {
                 ref country_code,
                 limit
             } => format!(
-                "{}{}/players?limit={}", b_api_concat!("/rankings/"), country_code, limit
+                "{}{}/players?limit={}", b_api_concat!("rankings/"), country_code, limit
             ),
 
             Route::ClubRankings {
                 ref country_code,
                 limit
             } => format!(
-                "{}{}/clubs?limit={}", b_api_concat!("/rankings/"), country_code, limit
+                "{}{}/clubs?limit={}", b_api_concat!("rankings/"), country_code, limit
+            ),
+
+            Route::BrawlerRankings {
+                ref country_code,
+                brawler_id,
+                limit
+            } => format!(
+                "{}{}/brawlers/{}?limit={}",
+                b_api_concat!("rankings/"), country_code, brawler_id, limit
             ),
         }
     }
