@@ -1,7 +1,7 @@
 //! Contains models related to the `/players/:tag/battlelog` endpoint of the Brawl Stars API.
 //! Included by the feature `"players"`; removing that feature will disable the usage of this module.
 
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 use crate::traits::{GetFetchProp, PropFetchable, FetchFrom};
 use crate::http::routes::Route;
 use crate::util::{fetch_route, a_fetch_route};
@@ -13,7 +13,7 @@ use crate::serde::one_default;
 use async_trait::async_trait;
 use crate::http::Client;
 
-use super::Player;
+use super::player::Player;
 
 // region:BattleLog
 
@@ -65,6 +65,34 @@ impl Deref for BattleLog {
     /// [`items`]: #structfield.items
     fn deref(&self) -> &Vec<Battle> {
         &self.items
+    }
+}
+
+impl DerefMut for BattleLog {
+    /// Obtain the player's battles - dereferencing returns the [`items`] field.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// use brawl_api::{Client, BattleLog, traits::*};
+    ///
+    /// # fn main() -> Result<(), Box<dyn ::std::error::Error>> {
+    /// let client = Client::new("my auth token");
+    /// let battlelog = BattleLog::fetch(
+    ///     &client,            // <- the client containing the auth key
+    ///     "#PLAYER_TAG_HERE"  // <- the player whose battlelog should be fetched
+    /// )?;
+    ///
+    /// assert_eq!(battlelog.items, *battlelog);
+    ///
+    /// #     Ok(())
+    /// # }
+    ///
+    /// ```
+    ///
+    /// [`items`]: #structfield.items
+    fn deref_mut(&mut self) -> &mut Vec<Battle> {
+        &mut self.items
     }
 }
 

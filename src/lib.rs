@@ -57,7 +57,8 @@
 //! - `auto-hashtag` flag: Enables the smart insertion of hashtags on anywhere a tag is required.
 //!     - This means, for example, that on a [`Player::fetch`] call, which requires the tag of the
 //! player to be fetched, one can pass a string containing a hashtag at the start (in which case,
-//! the library simply uses it) or without (then, with this feature on, the lib adds it for you).
+//! the library simply uses it) ***or without*** (then, with this feature on, the lib adds it for
+//! you).
 //!     - Disabling this requires passing hashtags at the start of every tag string. This is due to
 //! how the API parses tags, and not much can be done about it.
 //! - `players` flag: Enables the usage of the [`model::players`] module (for the `/players` endpoint).
@@ -70,6 +71,7 @@
 //! [`serde-json`]: https://crates.io/crate/serde-json
 //! [`Serialize`]: https://docs.rs/serde/*/ser/trait.Serialize.html
 //! [`Deserialize`]: https://docs.rs/serde/*/de/trait.Deserialize.html
+//! [`Player::fetch`]: model/players/player/struct.Player.html#method.fetch
 //! [`model`]: model/
 //! [`prelude`]: prelude/
 //! [`Brawlers`]: constants/enum.Brawlers.html
@@ -105,7 +107,7 @@ pub use model::players::{
 pub mod traits;
 
 #[cfg(feature = "clubs")]
-pub use model::clubs::{Club, ClubMember, ClubMemberRole, ClubType};
+pub use model::clubs::{Club, ClubMember, ClubMembers, ClubMemberRole, ClubType};
 
 #[cfg(feature = "rankings")]
 pub use model::rankings::{

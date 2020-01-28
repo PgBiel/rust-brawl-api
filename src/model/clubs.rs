@@ -15,7 +15,9 @@ use crate::util::a_fetch_route;
 #[cfg(feature = "players")]
 use super::players::PlayerClub;
 use crate::http::Client;
-use crate::serde::deserialize_number_from_string;
+use crate::serde::{
+    serialize_smt_pointer, deserialize_number_from_string, deserialize_default_smt_pointer
+};
 use crate::http::routes::Route;
 use crate::util::{auto_hashtag, fetch_route};
 
@@ -23,9 +25,11 @@ use std::fmt::{Display, Formatter};
 use crate::model::rankings::ClubRanking;
 use std::cmp::Ordering;
 
+pub use members::ClubMembers;
+
 /// The type of club (whether it's open, invite-only, or closed).
 #[non_exhaustive]
-#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ClubType {
     Open,
@@ -89,11 +93,15 @@ pub struct Club {
     #[serde(default)]
     pub required_trophies: usize,
 
-    /// The members in this club, as a vector of [`ClubMember`].
+    /// The members in this club, as a vector of [`ClubMember`] (note that the [`ClubMembers`]
+    /// struct is simply a smart pointer for `Vec<ClubMember>`).
     ///
-    /// [`ClubMember`]: ./struct.ClubMember.html
+    /// [`ClubMember`]: struct.ClubMember.html
+    /// [`ClubMembers`]: ./members/struct.ClubMembers.html
     #[serde(default)]
-    pub members: Vec<ClubMember>,
+    #[serde(serialize_with="serialize_smt_pointer")]
+    #[serde(deserialize_with="deserialize_default_smt_pointer")]
+    pub members: ClubMembers, // Vec<ClubMember>,
 
     /// The type of club (see [`ClubType`] docs).
     ///
@@ -113,7 +121,7 @@ impl Default for Club {
     /// # Examples
     ///
     /// ```rust
-    /// use brawl_api::{Club, ClubType};
+    /// use brawl_api::{Club, ClubType, ClubMembers};
     ///
     /// assert_eq!(
     ///     Club::default(),
@@ -123,7 +131,7 @@ impl Default for Club {
     ///         description: None,
     ///         trophies: 0,
     ///         required_trophies: 0,
-    ///         members: vec![],
+    ///         members: ClubMembers::default(),
     ///         club_type: ClubType::Open,
     ///     }
     /// );
@@ -135,7 +143,7 @@ impl Default for Club {
             description: None,
             trophies: 0,
             required_trophies: 0,
-            members: vec![],
+            members: ClubMembers::default(),
             club_type: ClubType::Open,
         }
     }
@@ -156,7 +164,9 @@ impl PropFetchable for Club {
     /// (Sync) Fetches a club from its tag.
     fn fetch(client: &Client, tag: &str) -> Result<Club> {
         let route = Club::get_route(tag);
-        fetch_route::<Club>(client, &route)
+        let mut club = fetch_route::<Club>(client, &route)?;
+        club.members.tag = tag.to_owned();
+        Ok(club)
     }
 
     /// (Async) Fetches a club from its tag.
@@ -166,7 +176,9 @@ impl PropFetchable for Club {
               Self::Property: 'async_trait,
     {
         let route = Club::get_route(tag);
-        a_fetch_route::<Club>(client, &route).await
+        let mut club = a_fetch_route::<Club>(client, &route).await?;
+        club.members.tag = tag.to_owned();
+        Ok(club)
     }
 }
 
@@ -289,7 +301,7 @@ impl Default for ClubMemberRole {
 /// A struct representing a Brawl Stars club's member, with its club-relevant data
 /// (most importantly, its role). Use [`Player::fetch_from`] to fetch the full player data.
 ///
-/// [`ClubMember`]: ../players/player/struct.Player.html#method.fetch_from
+/// [`Player::fetch_from`]: ../players/player/struct.Player.html#method.fetch_from
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ClubMember {
 
@@ -395,4 +407,239 @@ impl Default for ClubMember {
     }
 }
 
-// TODO: clubs/<tag>/members endpoint
+/// Contains the model for the `/clubs/:tag/members` endpoint, which simply retrieves a club's
+/// members without needing to get the rest of the data.
+pub mod members {
+    use super::*;
+    use std::ops::{Deref, DerefMut};
+
+    /// Represents a list of Club members, without relating to a previous [`Club`] object.
+    /// This is only used if one does not want to fetch full club data, but only its members.
+    ///
+    /// Use [`ClubMembers::fetch`] to fetch the members from a specific club tag.
+    /// 
+    /// [`Club`]: ../struct.Club.html
+    /// [`ClubMembers::fetch`]: #method.fetch
+    #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+    pub struct ClubMembers {
+        /// The tag of the club whose members were fetched.
+        #[serde(skip)]  // artificial
+        pub tag: String,
+
+        /// The fetched members of the specified club.
+        #[serde(default)]
+        pub items: Vec<ClubMember>
+    }
+
+    impl Deref for ClubMembers {
+        type Target = Vec<ClubMember>;
+
+        /// Obtain the club's members - dereferencing returns the [`items`] field.
+        ///
+        /// # Examples
+        ///
+        /// ```rust,ignore
+        /// use brawl_api::{Client, ClubMembers, traits::*};
+        ///
+        /// # fn main() -> Result<(), Box<dyn ::std::error::Error>> {
+        /// let client = Client::new("my auth token");
+        /// let members = ClubMembers::fetch(
+        ///     &client,            // <- the client containing the auth key
+        ///     "#CLUB_TAG_HERE"  // <- the club whose members should be fetched
+        /// )?;
+        ///
+        /// assert_eq!(members.items, *members);
+        ///
+        /// #     Ok(())
+        /// # }
+        ///
+        /// ```
+        ///
+        /// [`items`]: #structfield.items
+        fn deref(&self) -> &Vec<ClubMember> {
+            &self.items
+        }
+    }
+
+    impl DerefMut for ClubMembers {
+        /// Obtain the club's members - dereferencing returns the [`items`] field.
+        ///
+        /// # Examples
+        ///
+        /// ```rust,ignore
+        /// use brawl_api::{Client, ClubMembers, traits::*};
+        ///
+        /// # fn main() -> Result<(), Box<dyn ::std::error::Error>> {
+        /// let client = Client::new("my auth token");
+        /// let members = ClubMembers::fetch(
+        ///     &client,            // <- the client containing the auth key
+        ///     "#CLUB_TAG_HERE"  // <- the club whose members should be fetched
+        /// )?;
+        ///
+        /// assert_eq!(members.items, *members);
+        ///
+        /// #     Ok(())
+        /// # }
+        ///
+        /// ```
+        ///
+        /// [`items`]: #structfield.items
+        fn deref_mut(&mut self) -> &mut Vec<ClubMember> {
+            &mut self.items
+        }
+    }
+
+    impl GetFetchProp for ClubMembers {
+        type Property = str;
+
+        fn get_fetch_prop(&self) -> &str {
+            &*self.tag
+        }
+
+        fn get_route(tag: &str) -> Route {
+            Route::ClubMembers(tag.to_owned())
+        }
+    }
+
+    impl From<Club> for ClubMembers {
+        /// Simply returns a given [`Club`]'s [`members`][Club.members] field.
+        ///
+        /// [`Club`]: ../struct.Club.html
+        /// [Club.members]: ../struct.Club.html#structfield.members
+        fn from(club: Club) -> ClubMembers {
+            club.members
+        }
+    }
+
+    impl From<&Club> for ClubMembers {
+        /// Simply returns a given [`Club`]'s [`members`][Club.members] field,
+        /// **while cloning**.
+        ///
+        /// [`Club`]: ../struct.Club.html
+        /// [Club.members]: ../struct.Club.html#structfield.members
+        fn from(club: &Club) -> ClubMembers {
+            club.members.to_owned()
+        }
+    }
+
+    impl<'a> From<&'a Club> for &'a ClubMembers {
+        /// Simply returns a given [`Club`]'s [`members`][Club.members] field.
+        ///
+        /// [`Club`]: ../struct.Club.html
+        /// [Club.members]: ../struct.Club.html#structfield.members
+        fn from(club: &'a Club) -> Self {
+            (&club.members) as &'a ClubMembers
+        }
+    }
+
+    #[cfg_attr(feature = "async", async_trait)]
+    impl PropFetchable for ClubMembers {
+        type Property = str;
+
+        /// (Sync) Fetches a club's members, given its tag, without fetching the rest of the data.
+        /// (If it is desired to fetch the rest of the data as well, simply fetching a [`Club`] is
+        /// enough, since that also fetches all of the members.)
+        ///
+        /// # Errors
+        ///
+        /// This function may error:
+        /// - While requesting (will return an [`Error::Request`]);
+        /// - After receiving a bad status code (API or other error - returns an [`Error::Status`]);
+        /// - After a ratelimit is indicated by the API, while also specifying when it is lifted ([`Error::Ratelimited`]);
+        /// - While parsing incoming JSON (will return an [`Error::Json`]).
+        ///
+        /// (All of those, of course, wrapped inside an `Err`.)
+        ///
+        /// # Examples
+        ///
+        /// ```rust,ignore
+        /// use brawl_api::{Client, Club, ClubMembers, traits::*};
+        ///
+        /// # fn main() -> Result<(), Box<dyn ::std::error::Error>> {
+        /// let my_client = Client::new("my auth token");
+        /// let club_members = ClubMembers::fetch(&my_client, "#CLUBTAGHERE")?;
+        /// // now you have the members of the club with the given tag.
+        ///
+        /// # Ok(())
+        /// # }
+        /// ```
+        ///
+        /// [`Club`]: ../struct.Club.html
+        /// [`Error::Request`]: error/enum.Error.html#variant.Request
+        /// [`Error::Status`]: error/enum.Error.html#variant.Status
+        /// [`Error::Ratelimited`]: error/enum.Error.html#variant.Ratelimited
+        /// [`Error::Json`]: error/enum.Error.html#variant.Json
+        fn fetch(client: &Client, tag: &str) -> Result<ClubMembers> {
+            let route = Self::get_route(tag);
+            let mut members = fetch_route::<ClubMembers>(client, &route)?;
+            members.tag = tag.to_owned();
+            Ok(members)
+        }
+
+        /// (Async) Fetches a club's members, given its tag, without fetching the rest of the data.
+        /// (If it is desired to fetch the rest of the data as well, simply fetching a [`Club`] is
+        /// enough, since that also fetches all of the members.)
+        ///
+        /// # Errors
+        ///
+        /// This function may error:
+        /// - While requesting (will return an [`Error::Request`]);
+        /// - After receiving a bad status code (API or other error - returns an [`Error::Status`]);
+        /// - After a ratelimit is indicated by the API, while also specifying when it is lifted ([`Error::Ratelimited`]);
+        /// - While parsing incoming JSON (will return an [`Error::Json`]).
+        ///
+        /// (All of those, of course, wrapped inside an `Err`.)
+        ///
+        /// # Examples
+        ///
+        /// ```rust,ignore
+        /// use brawl_api::{Client, Club, ClubMembers, traits::*};
+        ///
+        /// # async fn main() -> Result<(), Box<dyn ::std::error::Error>> {
+        /// let my_client = Client::new("my auth token");
+        /// let club_members = ClubMembers::a_fetch(&my_client, "#CLUBTAGHERE").await?;
+        /// // now you have the members of the club with the given tag.
+        ///
+        /// # Ok(())
+        /// # }
+        /// ```
+        ///
+        /// [`Club`]: ../struct.Club.html
+        /// [`Error::Request`]: error/enum.Error.html#variant.Request
+        /// [`Error::Status`]: error/enum.Error.html#variant.Status
+        /// [`Error::Ratelimited`]: error/enum.Error.html#variant.Ratelimited
+        /// [`Error::Json`]: error/enum.Error.html#variant.Json
+        #[cfg(feature="async")]
+        async fn a_fetch(client: &Client, tag: &'async_trait str) -> Result<ClubMembers>
+            where Self: 'async_trait,
+                  Self::Property: 'async_trait,
+        {
+            let route = ClubMembers::get_route(tag);
+            let mut members = a_fetch_route::<ClubMembers>(client, &route).await?;
+            members.tag = tag.to_owned();
+            Ok(members)
+        }
+    }
+
+    impl Default for ClubMembers {
+        /// Returns an instance of `ClubMembers` with initial values.
+        ///
+        /// # Examples
+        ///
+        /// ```rust
+        /// use brawl_api::model::ClubMembers;
+        ///
+        /// assert_eq!(
+        ///     ClubMembers::default(),
+        ///     ClubMembers {
+        ///         tag: String::from(""),
+        ///         items: vec![],
+        ///     }
+        /// );
+        /// ```
+        fn default() -> ClubMembers {
+            ClubMembers { tag: String::from(""), items: vec![] }
+        }
+    }
+}
+

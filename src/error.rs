@@ -67,7 +67,7 @@ pub enum Error {
     /// (If field .2 is None, that implies field .1 is None, since an APIError comes from a JSON
     /// object).
     ///
-    /// [`APIError`]: ./error/struct.APIError.html
+    /// [`APIError`]: struct.APIError.html
     Status(StatusCode, Option<APIError>, Option<JsonValue>),
 
     /// Represents an error while operating the conversion of types through [`FetchFrom`]. Note that
@@ -76,7 +76,7 @@ pub enum Error {
     ///
     /// At field `.0`, there is a `String` object describing what occurred.
     ///
-    /// [`FetchFrom`]: ./traits/trait.FetchFrom.html
+    /// [`FetchFrom`]: traits/trait.FetchFrom.html
     FetchFrom(String),
 }
 
@@ -159,7 +159,9 @@ impl Error {
         match *self {
             Error::Json(ref e) => String::from(e.description()),
 
-            Error::Authorization(_) => String::from("Auth key was provided in an invalid format for a header."),
+            Error::Authorization(_) => String::from(
+                "Auth key was provided in an invalid format for a header."
+            ),
 
             Error::Url(_) => String::from("Invalid URL was given/built."),
 

@@ -4,7 +4,7 @@
 use serde::{self, Serialize, Deserialize};
 use crate::traits::{PropLimRouteable, PropLimFetchable};
 use crate::serde::{one_default, oxffffff_default};
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 use crate::util::fetch_route;
 use crate::error::Result;
 
@@ -57,6 +57,35 @@ impl Deref for PlayerLeaderboard {
     /// [`items`]: #structfield.items
     fn deref(&self) -> &Vec<PlayerRanking> {
         &self.items
+    }
+}
+
+impl DerefMut for PlayerLeaderboard {
+    /// Obtain the players in the ranking - dereferencing returns the [`items`] field.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// use brawl_api::{Client, PlayerLeaderboard, traits::*};
+    ///
+    /// # fn main() -> Result<(), Box<dyn ::std::error::Error>> {
+    /// let client = Client::new("my auth token");
+    /// let top50players = PlayerLeaderboard::fetch(
+    ///     &client,   // <- the client containing the auth key
+    ///     "global",  // <- the region of the leaderboard to fetch ("global" - world-wide)
+    ///     50         // <- limit of rankings to fetch (i.e. top 50)
+    /// )?;
+    ///
+    /// assert_eq!(top50players.items, *top50players);
+    ///
+    /// #     Ok(())
+    /// # }
+    ///
+    /// ```
+    ///
+    /// [`items`]: #structfield.items
+    fn deref_mut(&mut self) -> &mut Vec<PlayerRanking> {
+        &mut self.items
     }
 }
 
