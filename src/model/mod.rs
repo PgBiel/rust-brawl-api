@@ -22,6 +22,8 @@
 //! [`model::players::battlelog`] module;
 //! - `/clubs/:tag` -> [`Club::fetch`] (through the [`PropFetchable`] trait),
 //! [`model::clubs`] module;
+//! - `/clubs/:tag/members` -> [`ClubMembers::fetch`] (through the [`PropFetchable`] trait),
+//! [`model::clubs::members`] module;
 //! - `/rankings/:country_code/players?limit=x` -> [`PlayerLeaderboard::fetch`] (through the
 //! [`PropLimFetchable`] trait), [`model::rankings::players`] module;
 //! - `/rankings/:country_code/clubs?limit=x` -> [`ClubLeaderboard::fetch`] (through the
@@ -37,6 +39,7 @@
 //! [`Player::fetch`]: ./players/player/struct.Player.html#method.fetch
 //! [`BattleLog::fetch`]: ./players/battlelog/struct.BattleLog.html#method.fetch
 //! [`Club::fetch`]: ./clubs/struct.Club.html#method.fetch
+//! [`ClubMembers::fetch`]: ./clubs/members/struct.ClubMembers.html#method.fetch
 //! [`PlayerLeaderboard::fetch`]: ./rankings/players/struct.PlayerLeaderboard.html#method.fetch
 //! [`ClubLeaderboard::fetch`]: ./rankings/players/struct.ClubLeaderboard.html#method.fetch
 //! [`BrawlerLeaderboard::fetch`]: ./rankings/players/struct.BrawlerLeaderboard.html#method.fetch
@@ -45,6 +48,7 @@
 //! [`model::players::player`]: ./players/player/
 //! [`model::players::battlelog`]: ./players/battlelog/
 //! [`model::clubs`]: ./clubs/
+//! [`model::clubs::members`]: ./clubs/members
 //! [`model::rankings::players`]: ./rankings/players/
 //! [`model::rankings::clubs`]: ./rankings/clubs/
 //! [`model::rankings::brawlers`]: ./rankings/brawlers/

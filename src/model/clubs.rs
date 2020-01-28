@@ -553,7 +553,7 @@ pub mod members {
         /// # Examples
         ///
         /// ```rust,ignore
-        /// use brawl_api::{Client, Club, ClubMembers, traits::*};
+        /// use brawl_api::{Client, ClubMembers, traits::*};
         ///
         /// # fn main() -> Result<(), Box<dyn ::std::error::Error>> {
         /// let my_client = Client::new("my auth token");
@@ -593,7 +593,7 @@ pub mod members {
         /// # Examples
         ///
         /// ```rust,ignore
-        /// use brawl_api::{Client, Club, ClubMembers, traits::*};
+        /// use brawl_api::{Client, ClubMembers, traits::*};
         ///
         /// # async fn main() -> Result<(), Box<dyn ::std::error::Error>> {
         /// let my_client = Client::new("my auth token");

@@ -42,7 +42,7 @@ pub(crate) fn serialize_smt_pointer<T, S>(
 pub(crate) fn deserialize_default_smt_pointer<'de, T, D>(deserializer: D) -> StdResult<T, D::Error>
     where
         D: Deserializer<'de>,
-        T: ::serde::Deserialize<'de> + DerefMut + Default,
+        T: ::serde::Deserialize<'de> + DerefMut + Default,  // could remove the Deserialize req here
         <T as Deref>::Target: Sized + ::serde::Deserialize<'de>,
         // T::Err: Display,
 {
@@ -58,7 +58,7 @@ pub(crate) fn deserialize_default_smt_pointer<'de, T, D>(deserializer: D) -> Std
     )?;
 
     match unserialized {
-        Detect::Ptr(p) => Ok(p),
+        Detect::Ptr(p) => Ok(p),  // if it's already the desired type, then return it
         Detect::ValidValue(val) => Ok({
             let mut new_smt_point = T::default();
             *new_smt_point = val;
