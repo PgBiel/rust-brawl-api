@@ -76,8 +76,27 @@ pub enum Error {
     ///
     /// At field `.0`, there is a `String` object describing what occurred.
     ///
-    /// [`FetchFrom`]: traits/trait.FetchFrom.html
+    /// [`FetchFrom`]: ../traits/trait.FetchFrom.html
     FetchFrom(String),
+
+    /// Represents an error while using [`TimeLike.parse`]. Note that this is feature-gated
+    /// by the `chrono` feature (meaning that, if it is disabled, this variant is removed).
+    ///
+    /// [`TimeLike.parse`]: ../time/struct.TimeLike.html#method.parse
+    #[cfg(feature = "chrono")]
+    ParseTimeLike {
+        /// The reason why this error occurred.
+        reason: String,
+
+        /// The offending (invalid) string that triggered this error, if any.
+        offender: Option<String>,
+
+        /// The original [`chrono::ParseError`], if there was any (otherwise, it's a custom
+        /// error triggered by the library).
+        ///
+        /// [`chrono::ParseError`]: https://docs.rs/chrono/*/chrono/format/struct.ParseError.html
+        original_err: Option<::chrono::ParseError>,
+    },
 }
 
 /// Represents an error given by the API, with its specifications.
@@ -130,6 +149,18 @@ impl From<UrlError> for Error {
     }
 }
 
+#[cfg(feature = "chrono")]
+impl From<::chrono::ParseError> for Error {
+    fn from(err: ::chrono::ParseError) -> Error {
+        Error::ParseTimeLike {
+            reason: err.to_string(),
+            offender: None,
+            original_err: Some(err),
+        }
+    }
+}
+
+
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> ::std::fmt::Result {
         match *self {
@@ -141,6 +172,8 @@ impl Display for Error {
     }
 }
 
+
+
 impl StdError for Error {
 
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
@@ -148,6 +181,13 @@ impl StdError for Error {
             Error::Json(ref e) => Some(e),
             Error::Url(ref e) => Some(e),
             Error::Request(ref e) => Some(e),
+
+            #[cfg(feature = "chrono")]
+            Error::ParseTimeLike { ref original_err, .. } => match original_err {
+                Some(ref e) => Some(e),
+                None => None,
+            },
+
             _ => None,
         }
     }
@@ -171,7 +211,7 @@ impl Error {
                     None => String::from(""),
                 };
 
-                let time_part = match *time_until_reset {  // TODO: use chrono and humanize stamp
+                let time_part = match *time_until_reset {
                     Some(ref timeur) => format!(" Resets at timestamp {}.", timeur),
                     None => String::from(""),
                 };
@@ -198,6 +238,12 @@ impl Error {
             ),
 
             Error::FetchFrom(ref string) => string.clone(),
+
+            #[cfg(feature = "chrono")]
+            Error::ParseTimeLike {
+                ref reason,
+                ..
+            } => reason.clone(),
         }
     }
 

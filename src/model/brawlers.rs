@@ -256,7 +256,7 @@ impl Brawler {
     ///
     /// assert_eq!(brawler.get_fetch_prop(), brawler.id);
     /// ```
-    pub fn get_fetch_prop(&self) -> &usize { &self.id }
+    pub fn get_fetch_prop(&self) -> usize { self.id }
 
     /// Returns the [`Route`] object required for fetching a `Brawler` instance.
     ///

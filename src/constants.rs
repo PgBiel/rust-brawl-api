@@ -9,6 +9,17 @@ pub const USER_AGENT: &str = concat!(
     " - https://github.com/PgBiel/rust-brawl-api)"
 );
 
+/// The format used in [`TimeLike.parse`]. (Feature-gated with the `chrono` feature)
+///
+/// `"%Y%m%dT%H%M%S%.fZ"`
+///
+/// See [this table] for more info.
+///
+/// [`TimeLike.parse`]: ../time/struct.TimeLike.html#method.parse
+/// [this table]: https://docs.rs/chrono/*/chrono/format/strftime/index.html
+#[cfg(feature = "chrono")]
+pub const TIMELIKE_FORMAT: &str = "%Y%m%dT%H%M%S%.fZ";
+
 /// This eunm is an effort to aid the programmer's usage of brawler-related endpoints, by mapping
 /// human-readable brawler names to their respective IDs. (Use by casting to int; e.g. `x as usize`)
 ///

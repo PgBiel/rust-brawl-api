@@ -61,6 +61,8 @@
 //! automatically).
 //!     - Disabling this requires passing hashtags at the start of every tag string. This is due to
 //! how the API parses tags, and not much can be done about it.
+//! - `chrono`: Adds `chrono` as dependency and enables the usage of [`TimeLike.parse`], which
+//! parses an incoming timestamp into a [`chrono::DateTime<chrono::Utc>`].
 //! - `players` flag: Enables the usage of the [`model::players`] module (for the `/players` endpoint).
 //! - `clubs` flag: Enables the usage of the [`model::clubs`] module (for the `/clubs` endpoint).
 //! - `rankings` flag: Enables the usage of the [`model::rankings`] module (for the `/rankings` endpoint).
@@ -72,6 +74,8 @@
 //! [`Serialize`]: https://docs.rs/serde/*/ser/trait.Serialize.html
 //! [`Deserialize`]: https://docs.rs/serde/*/de/trait.Deserialize.html
 //! [`Player::fetch`]: model/players/player/struct.Player.html#method.fetch
+//! [`TimeLike.parse`]: time/struct.TimeLike.html#method.parse
+//! [`chrono::DateTime<chrono::Utc>`]: https://docs.rs/chrono/*/chrono/struct.DateTime.html
 //! [`model`]: model/index.html
 //! [`prelude`]: prelude/index.html
 //! [`Brawlers`]: constants/enum.Brawlers.html
@@ -93,6 +97,9 @@ pub use http::client::Client;
 mod macros;
 
 pub mod model;
+
+pub mod time;
+pub use time::TimeLike;
 
 #[cfg(any(feature = "players", feature = "brawlers"))]
 pub use model::common::StarPower;

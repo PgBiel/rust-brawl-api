@@ -14,6 +14,7 @@ use async_trait::async_trait;
 use crate::http::Client;
 
 use super::player::Player;
+use crate::TimeLike;
 
 // region:BattleLog
 
@@ -263,7 +264,7 @@ impl PropFetchable for BattleLog {
 pub struct Battle {
     /// The time at which this battle occurred, in ISO format.
     #[serde(default)]
-    pub battle_time: String,  // TODO: Chrono
+    pub battle_time: TimeLike,
 
     /// Data about the event in which this battle occurred.
     #[serde(default)]
@@ -281,12 +282,12 @@ impl Default for Battle {
     /// # Examples
     ///
     /// ```rust
-    /// use brawl_api::{Battle, BattleEvent, BattleResultInfo};
+    /// use brawl_api::{Battle, BattleEvent, BattleResultInfo, TimeLike};
     ///
     /// assert_eq!(
     ///     Battle::default(),
     ///     Battle {
-    ///         battle_time: String::from(""),
+    ///         battle_time: TimeLike::default(),
     ///         event: BattleEvent::default(),
     ///         result: BattleResultInfo::default()
     ///     }
@@ -294,7 +295,7 @@ impl Default for Battle {
     /// ```
     fn default() -> Battle {
         Battle {
-            battle_time: String::from(""),
+            battle_time: TimeLike::default(),
             event: BattleEvent::default(),
             result: BattleResultInfo::default()
         }
