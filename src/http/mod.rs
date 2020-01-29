@@ -6,3 +6,4 @@ pub mod client;
 pub use client::Client;
 
 pub mod routes;
+pub use routes::Route;

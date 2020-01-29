@@ -85,7 +85,7 @@ pub mod propfetch {
         /// # fn main() -> Result<(), Box<dyn ::std::error::Error>> {
         /// let my_client = Client::new("my auth token");
         /// let player = Player::fetch(&my_client, "#PLAYERTAGHERE")?;
-        /// // now you have data for the given player.
+        /// // now the data for the given player is available for use
         ///
         /// #     Ok(())
         /// # }
@@ -120,7 +120,7 @@ pub mod propfetch {
         /// # async fn main() -> Result<(), Box<dyn ::std::error::Error>> {
         /// let my_client = Client::new("my auth token");
         /// let player = Player::a_fetch(&my_client, "#PLAYERTAGHERE").await?;
-        /// // now you have data for the given player.
+        /// // now the data for the given player is available for use
         ///
         /// #     Ok(())
         /// # }
@@ -191,7 +191,7 @@ pub mod proplimfetch {
         /// let top100players: PlayerLeaderboard = PlayerLeaderboard::fetch(&client, "global", 100)?;
         ///
         /// // get player ranked #1. The items are usually sorted (i.e. rank 1 on index [0], rank 2
-        /// // on index [1] etc.), but, to make your program absolutely safe, might want to .sort()
+        /// // on index [1] etc.), but, to make the program absolutely safe, might want to .sort()
         /// let player1 = &top100players[0];
         ///
         /// assert_eq!(player1.rank, 1);
@@ -233,7 +233,7 @@ pub mod proplimfetch {
         /// let top100players: PlayerLeaderboard = PlayerLeaderboard::a_fetch(&client, "global", 100).await?;
         ///
         /// // get player ranked #1. The items are usually sorted (i.e. rank 1 on index [0], rank 2
-        /// // on index [1] etc.), but, to make your program absolutely safe, might want to .sort()
+        /// // on index [1] etc.), but, to make the program absolutely safe, might want to .sort()
         /// let player1 = &top100players[0];
         ///
         /// assert_eq!(player1.rank, 1);

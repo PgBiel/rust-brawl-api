@@ -30,6 +30,8 @@
 //! [`PropLimFetchable`] trait), [`model::rankings::clubs`] module;
 //! - `/rankings/:country_code/brawlers/:brawler_id?limit=x` -> [`BrawlerLeaderboard::fetch`]
 //! (direct implementation; no fetching-related traits), [`model::rankings::brawlers`] module;
+//! - `/brawlers/` -> [`BrawlerList::fetch`] (direct implementation), [`model::brawlers`] module;
+//! - `/brawlers/:id` -> [`Brawler::fetch`] (direct implementation), [`model::brawlers`] module.
 //!
 //! [`serde::ser::Serialize`]: https://docs.rs/serde/*/ser/trait.Serialize.html
 //! [`serde::de::Deserialize`]: https://docs.rs/serde/*/de/trait.Deserialize.html
@@ -43,17 +45,21 @@
 //! [`PlayerLeaderboard::fetch`]: ./rankings/players/struct.PlayerLeaderboard.html#method.fetch
 //! [`ClubLeaderboard::fetch`]: ./rankings/players/struct.ClubLeaderboard.html#method.fetch
 //! [`BrawlerLeaderboard::fetch`]: ./rankings/players/struct.BrawlerLeaderboard.html#method.fetch
+//! [`BrawlerList::fetch`]: ./brawlers/struct.BrawlerList.html#method.fetch
+//! [`Brawler::fetch`]: ./brawlers/struct.Brawler.html#method.fetch
 //! [`PropFetchable`]: traits/propfetch/trait.PropFetchable.html
 //! [`PropLimFetchable`]: traits/proplimfetch/trait.PropLimFetchable.html
-//! [`model::players::player`]: ./players/player/
-//! [`model::players::battlelog`]: ./players/battlelog/
-//! [`model::clubs`]: ./clubs/
-//! [`model::clubs::members`]: ./clubs/members
-//! [`model::rankings::players`]: ./rankings/players/
-//! [`model::rankings::clubs`]: ./rankings/clubs/
-//! [`model::rankings::brawlers`]: ./rankings/brawlers/
+//! [`model::players::player`]: ./players/player/index.html
+//! [`model::players::battlelog`]: ./players/battlelog/index.html
+//! [`model::clubs`]: ./clubs/index.html
+//! [`model::clubs::members`]: ./clubs/members/index.html
+//! [`model::rankings::players`]: ./rankings/players/index.html
+//! [`model::rankings::clubs`]: ./rankings/clubs/index.html
+//! [`model::rankings::brawlers`]: ./rankings/brawlers/index.html
+//! [`model::brawlers`]: ./brawlers/index.html
 
-// TODO: Complete list of endpoints
+pub mod common;
+pub use common::*;
 
 #[cfg(feature = "players")]
 pub mod players;
@@ -69,3 +75,8 @@ pub use clubs::*;
 pub mod rankings;
 #[cfg(feature = "rankings")]
 pub use rankings::*;
+
+#[cfg(feature = "brawlers")]
+pub mod brawlers;
+#[cfg(feature = "brawlers")]
+pub use brawlers::*;

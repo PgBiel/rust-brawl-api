@@ -127,7 +127,7 @@ impl FetchFrom<Player> for BattleLog {
     /// let player = Player::fetch(&my_client, "#PLAYERTAGHERE")?;
     /// // do stuff with player...
     /// let player_battlelog = BattleLog::fetch_from(&my_client, &player)?;
-    /// // now you have player's battlelog
+    /// // now the player's battlelog is available for use
     ///
     /// # Ok(())
     /// # }
@@ -156,7 +156,7 @@ impl FetchFrom<Player> for BattleLog {
     /// let player = Player::a_fetch(&my_client, "#PLAYERTAGHERE").await?;
     /// // do stuff with player...
     /// let player_battlelog = BattleLog::a_fetch_from(&my_client, &player).await?;
-    /// // now you have player's battlelog
+    /// // now the player's battlelog is available for use
     ///
     /// # Ok(())
     /// # }
@@ -194,7 +194,7 @@ impl PropFetchable for BattleLog {
     /// # fn main() -> Result<(), Box<dyn ::std::error::Error>> {
     /// let my_client = Client::new("my auth token");
     /// let player_battlelog = BattleLog::fetch(&my_client, "#PLAYERTAGHERE")?;
-    /// // now you have the battlelog of the player with the given tag.
+    /// // now the player's battlelog is available for use
     ///
     /// # Ok(())
     /// # }
@@ -231,7 +231,7 @@ impl PropFetchable for BattleLog {
     /// # async fn main() -> Result<(), Box<dyn ::std::error::Error>> {
     /// let my_client = Client::new("my auth token");
     /// let player_battlelog = BattleLog::a_fetch(&my_client, "#PLAYERTAGHERE").await?;
-    /// // now you have the battlelog of the player with the given tag.
+    /// // now the player's battlelog is available for use
     ///
     /// # Ok(())
     /// # }
@@ -308,7 +308,7 @@ impl Default for Battle {
 pub struct BattleEvent {
     /// The id of the event (an arbitrary number).
     #[serde(default)]
-    pub id: isize,
+    pub id: usize,
 
     /// The event mode (e.g. "brawlBall", "soloShowdown"...).
     #[serde(default)]
@@ -521,7 +521,7 @@ impl Default for BattlePlayer {
 pub struct BattleBrawler {
     /// The brawler's id (an arbitrary number).
     #[serde(default)]
-    pub id: isize,
+    pub id: usize,
 
     /// The brawler's name (e.g. "PENNY", "ROSA", "BROCK"...)
     #[serde(default)]

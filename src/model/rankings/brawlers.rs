@@ -141,7 +141,7 @@ impl BrawlerLeaderboard {
     /// )?;
     ///
     /// // get player ranked #1. The items are usually sorted (i.e. rank 1 on index [0], rank 2
-    /// // on index [1] etc.), but, to make your program absolutely safe, might want to .sort()
+    /// // on index [1] etc.), but, to make the program absolutely safe, might want to .sort()
     /// let tara1: &PlayerRanking = &top100taras[0];
     ///
     /// assert_eq!(tara1.rank, 1);
@@ -166,7 +166,7 @@ impl BrawlerLeaderboard {
     /// )?;
     ///
     /// // get player ranked #1. The items are usually sorted (i.e. rank 1 on index [0], rank 2
-    /// // on index [1] etc.), but, to make your program absolutely safe, might want to .sort()
+    /// // on index [1] etc.), but, to make the program absolutely safe, might want to .sort()
     /// let shelly1_zw: &PlayerRanking = &top150_zw_shelly[0];
     ///
     /// assert_eq!(shelly1_zw.rank, 1);
@@ -224,7 +224,7 @@ impl BrawlerLeaderboard {
     /// ).await?;
     ///
     /// // get player ranked #1. The items are usually sorted (i.e. rank 1 on index [0], rank 2
-    /// // on index [1] etc.), but, to make your program absolutely safe, might want to .sort()
+    /// // on index [1] etc.), but, to make the program absolutely safe, might want to .sort()
     /// let tara1: &PlayerRanking = &top100taras[0];
     ///
     /// assert_eq!(tara1.rank, 1);
@@ -249,7 +249,7 @@ impl BrawlerLeaderboard {
     /// ).await?;
     ///
     /// // get player ranked #1. The items are usually sorted (i.e. rank 1 on index [0], rank 2
-    /// // on index [1] etc.), but, to make your program absolutely safe, might want to .sort()
+    /// // on index [1] etc.), but, to make the program absolutely safe, might want to .sort()
     /// let shelly1_zw: &PlayerRanking = &top150_zw_shelly[0];
     ///
     /// assert_eq!(shelly1_zw.rank, 1);

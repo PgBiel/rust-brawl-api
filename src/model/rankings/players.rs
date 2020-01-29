@@ -121,7 +121,7 @@ impl PropLimFetchable for PlayerLeaderboard {
     /// let top100players: PlayerLeaderboard = PlayerLeaderboard::fetch(&client, "global", 100)?;
     ///
     /// // get player ranked #1. The items are usually sorted (i.e. rank 1 on index [0], rank 2
-    /// // on index [1] etc.), but, to make your program absolutely safe, might want to .sort()
+    /// // on index [1] etc.), but, to make the program absolutely safe, might want to .sort()
     /// let player1 = &top100players[0];
     ///
     /// assert_eq!(player1.rank, 1);
@@ -142,7 +142,7 @@ impl PropLimFetchable for PlayerLeaderboard {
     /// let top100zwplayers: PlayerLeaderboard = PlayerLeaderboard::fetch(&client, "ZW", 100)?;
     ///
     /// // get player ranked #1. The items are usually sorted (i.e. rank 1 on index [0], rank 2
-    /// // on index [1] etc.), but, to make your program absolutely safe, might want to .sort()
+    /// // on index [1] etc.), but, to make the program absolutely safe, might want to .sort()
     /// let player1 = &top100zwplayers[0];
     ///
     /// assert_eq!(player1.rank, 1);
@@ -187,7 +187,7 @@ impl PropLimFetchable for PlayerLeaderboard {
     /// let top100players: PlayerLeaderboard = PlayerLeaderboard::a_fetch(&client, "global", 100).await?;
     ///
     /// // get player ranked #1. The items are usually sorted (i.e. rank 1 on index [0], rank 2
-    /// // on index [1] etc.), but, to make your program absolutely safe, might want to .sort()
+    /// // on index [1] etc.), but, to make the program absolutely safe, might want to .sort()
     /// let player1 = &top100players[0];
     ///
     /// assert_eq!(player1.rank, 1);
@@ -208,7 +208,7 @@ impl PropLimFetchable for PlayerLeaderboard {
     /// let top100zwplayers: PlayerLeaderboard = PlayerLeaderboard::a_fetch(&client, "ZW", 100).await?;
     ///
     /// // get player ranked #1. The items are usually sorted (i.e. rank 1 on index [0], rank 2
-    /// // on index [1] etc.), but, to make your program absolutely safe, might want to .sort()
+    /// // on index [1] etc.), but, to make the program absolutely safe, might want to .sort()
     /// let player1 = &top100zwplayers[0];
     ///
     /// assert_eq!(player1.rank, 1);
@@ -286,7 +286,7 @@ pub struct PlayerRanking {
 
 /// Represents the club in a player's ranking (a [`PlayerRanking`] object). Since the only data
 /// available at the moment is its name, it cannot be converted into a full [`Club`] object
-/// using a convenient method. For that, you must have the original `PlayerRanking` object,
+/// using a convenient method. For that, one must have the original `PlayerRanking` object,
 /// then convert it into a [`Player`] with [`Player::fetch_from`].
 ///
 /// [`PlayerRanking`]: ./struct.PlayerRanking.html

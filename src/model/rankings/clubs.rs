@@ -121,7 +121,7 @@ impl PropLimFetchable for ClubLeaderboard {
     /// let top100clubs: ClubLeaderboard = ClubLeaderboard::fetch(&client, "global", 100)?;
     ///
     /// // get club ranked #1. The items are usually sorted (i.e. rank 1 on index [0], rank 2
-    /// // on index [1] etc.), but, to make your program absolutely safe, might want to .sort()
+    /// // on index [1] etc.), but, to make the program absolutely safe, might want to .sort()
     /// let club1 = &top100clubs[0];
     ///
     /// assert_eq!(club1.rank, 1);
@@ -142,7 +142,7 @@ impl PropLimFetchable for ClubLeaderboard {
     /// let top100zwclubs: ClubLeaderboard = ClubLeaderboard::fetch(&client, "ZW", 100)?;
     ///
     /// // get club ranked #1. The items are usually sorted (i.e. rank 1 on index [0], rank 2
-    /// // on index [1] etc.), but, to make your program absolutely safe, might want to .sort()
+    /// // on index [1] etc.), but, to make the program absolutely safe, might want to .sort()
     /// let club1 = &top100zwclubs[0];
     ///
     /// assert_eq!(club1.rank, 1);
@@ -186,7 +186,7 @@ impl PropLimFetchable for ClubLeaderboard {
     /// let top100clubs: ClubLeaderboard = ClubLeaderboard::a_fetch(&client, "global", 100).await?;
     ///
     /// // get club ranked #1. The items are usually sorted (i.e. rank 1 on index [0], rank 2
-    /// // on index [1] etc.), but, to make your program absolutely safe, might want to .sort()
+    /// // on index [1] etc.), but, to make the program absolutely safe, might want to .sort()
     /// let club1 = &top100clubs[0];
     ///
     /// # Ok::<(), Box<dyn ::std::error::Error>>(())
@@ -204,7 +204,7 @@ impl PropLimFetchable for ClubLeaderboard {
     /// let top100zwclubs: ClubLeaderboard = ClubLeaderboard::a_fetch(&client, "ZW", 100).await?;
     ///
     /// // get club ranked #1. The items are usually sorted (i.e. rank 1 on index [0], rank 2
-    /// // on index [1] etc.), but, to make your program absolutely safe, might want to .sort()
+    /// // on index [1] etc.), but, to make the program absolutely safe, might want to .sort()
     /// let club1 = &top100zwclubs[0];
     ///
     /// assert_eq!(club1.rank, 1);

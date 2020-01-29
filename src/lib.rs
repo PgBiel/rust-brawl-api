@@ -39,7 +39,7 @@
 //!
 //! This brings into scope all of the library's traits, models and the helper [`Brawlers`] enum.
 //!
-//! If you do not wish to bring all models into scope, then at least **import all traits** so that
+//! If it is not desired to bring all models into scope, then at least **import all traits** so that
 //! models work properly:
 //!
 //! ```rust
@@ -57,8 +57,8 @@
 //! - `auto-hashtag` flag: Enables the smart insertion of hashtags on anywhere a tag is required.
 //!     - This means, for example, that on a [`Player::fetch`] call, which requires the tag of the
 //! player to be fetched, one can pass a string containing a hashtag at the start (in which case,
-//! the library simply uses it) ***or without*** (then, with this feature on, the lib adds it for
-//! you).
+//! the library simply uses it) ***or without*** (then, with this feature on, the lib adds it
+//! automatically).
 //!     - Disabling this requires passing hashtags at the start of every tag string. This is due to
 //! how the API parses tags, and not much can be done about it.
 //! - `players` flag: Enables the usage of the [`model::players`] module (for the `/players` endpoint).
@@ -72,13 +72,13 @@
 //! [`Serialize`]: https://docs.rs/serde/*/ser/trait.Serialize.html
 //! [`Deserialize`]: https://docs.rs/serde/*/de/trait.Deserialize.html
 //! [`Player::fetch`]: model/players/player/struct.Player.html#method.fetch
-//! [`model`]: model/
-//! [`prelude`]: prelude/
+//! [`model`]: model/index.html
+//! [`prelude`]: prelude/index.html
 //! [`Brawlers`]: constants/enum.Brawlers.html
-//! [`model::players`]: model/players/
-//! [`model::clubs`]: model/clubs/
-//! [`model::rankings`]: model/rankings/
-//! [`model::brawlers`]: model/brawlers/
+//! [`model::players`]: model/players/index.html
+//! [`model::clubs`]: model/clubs/index.html
+//! [`model::rankings`]: model/rankings/index.html
+//! [`model::brawlers`]: model/brawlers/index.html
 
 pub(crate) mod util;
 
@@ -94,9 +94,12 @@ mod macros;
 
 pub mod model;
 
+#[cfg(any(feature = "players", feature = "brawlers"))]
+pub use model::common::StarPower;
+
 #[cfg(feature = "players")]
 pub use model::players::{
-    Player, PlayerClub, PlayerBrawlerStat, StarPower,
+    Player, PlayerClub, PlayerBrawlerStat,
     battlelog::{
         BattleLog,
         Battle, BattleEvent, BattleResultInfo,
@@ -115,6 +118,9 @@ pub use model::rankings::{
     clubs::{ClubLeaderboard, ClubRanking},
     brawlers::BrawlerLeaderboard,
 };
+
+#[cfg(feature = "brawlers")]
+pub use model::brawlers::{BrawlerList, Brawler};
 
 pub mod error;
 pub use error::{Error, Result};

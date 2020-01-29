@@ -1,4 +1,4 @@
-//! Models for the `players/:tag` API endpoint.
+//! Models for the `/players/:tag` API endpoint.
 //! Included by the feature `"players"`; removing that feature will disable the usage of this module.
 
 use serde::{self, Serialize, Deserialize};
@@ -24,9 +24,9 @@ use crate::http::routes::Route;
 use crate::util::{auto_hashtag, fetch_route};
 use crate::serde::{deserialize_number_from_string, one_default, oxffffff_default};
 
+use super::super::common::StarPower;
 
-
-use crate::model::players::battlelog::{BattlePlayer};
+use super::battlelog::{BattlePlayer};
 
 #[cfg(feature = "rankings")]
 use crate::PlayerRanking;
@@ -190,7 +190,7 @@ impl PropFetchable for Player {
     /// # fn main() -> Result<(), Box<dyn ::std::error::Error>> {
     /// let my_client = Client::new("my auth token");
     /// let player = Player::fetch(&my_client, "#PLAYERTAGHERE")?;
-    /// // now you have data for the given player.
+    /// // now the data for the given player is available for use
     ///
     /// # Ok(())
     /// # }
@@ -225,7 +225,7 @@ impl PropFetchable for Player {
     /// # async fn main() -> Result<(), Box<dyn ::std::error::Error>> {
     /// let my_client = Client::new("my auth token");
     /// let player = Player::a_fetch(&my_client, "#PLAYERTAGHERE").await?;
-    /// // now you have data for the given player.
+    /// // now the data for the given player is available for use
     ///
     /// # Ok(())
     /// # }
@@ -495,44 +495,6 @@ impl Default for PlayerBrawlerStat {
             highest_trophies: 0,
             power: 1,
             name: String::from(""),
-        }
-    }
-}
-
-/// A struct representing a brawler's star power.
-#[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
-pub struct StarPower {
-
-    /// The star power name.
-    #[serde(default)]
-    pub name: String,
-
-    /// The star power's id (an arbitrary number).
-    #[serde(default)]
-    pub id: isize
-}
-
-impl Default for StarPower {
-
-    /// Returns an instance of `StarPower` with initial values.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use brawl_api::StarPower;
-    ///
-    /// assert_eq!(
-    ///     StarPower::default(),
-    ///     StarPower {
-    ///         name: String::from(""),
-    ///         id: 0,
-    ///     }
-    /// );
-    /// ```
-    fn default() -> StarPower {
-        StarPower {
-            name: String::from(""),
-            id: 0
         }
     }
 }

@@ -76,6 +76,13 @@ pub enum Route {
         /// on this specific brawler).
         limit: u8,
     },
+
+    /// Route for the `/brawlers/` endpoint, which returns data for all brawlers in the game.
+    Brawlers,
+
+    /// Route for the `/brawlers/:id` endpoint, which returns data for a specific brawler, given
+    /// that brawler's ID.
+    Brawler(usize),
 }
 
 impl Route {
@@ -128,6 +135,14 @@ impl Route {
                 "{}{}/brawlers/{}?limit={}",
                 b_api_concat!("rankings/"), country_code, brawler_id, limit
             ),
+
+            Route::Brawlers => String::from(b_api_concat!("brawlers/")),
+
+            Route::Brawler(id) => format!(
+                "{}/{}",
+                b_api_concat!("brawlers"),
+                id,
+            )
         }
     }
 }

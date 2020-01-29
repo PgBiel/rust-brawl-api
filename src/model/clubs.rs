@@ -1,4 +1,4 @@
-//! Models for the `/club/:tag` Brawl Stars API endpoint.
+//! Models for the `/clubs/:tag` Brawl Stars API endpoint.
 //! Included by the feature `"clubs"`; removing that feature will disable the usage of this module.
 
 #[cfg(feature = "async")]
@@ -162,14 +162,72 @@ impl PropFetchable for Club {
     type Property = str;
 
     /// (Sync) Fetches a club from its tag.
+    ///
+    /// # Errors
+    ///
+    /// This function may error:
+    /// - While requesting (will return an [`Error::Request`]);
+    /// - After receiving a bad status code (API or other error - returns an [`Error::Status`]);
+    /// - After a ratelimit is indicated by the API, while also specifying when it is lifted ([`Error::Ratelimited`]);
+    /// - While parsing incoming JSON (will return an [`Error::Json`]).
+    ///
+    /// (All of those, of course, wrapped inside an `Err`.)
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// use brawl_api::{Client, Club, traits::*};
+    ///
+    /// # fn main() -> Result<(), Box<dyn ::std::error::Error>> {
+    /// let my_client = Client::new("my auth token");
+    /// let club = Club::fetch(&my_client, "#CLUBTAGHERE")?;
+    /// // now the data for the given club is available for use.
+    ///
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// [`Error::Request`]: error/enum.Error.html#variant.Request
+    /// [`Error::Status`]: error/enum.Error.html#variant.Status
+    /// [`Error::Ratelimited`]: error/enum.Error.html#variant.Ratelimited
+    /// [`Error::Json`]: error/enum.Error.html#variant.Json
     fn fetch(client: &Client, tag: &str) -> Result<Club> {
         let route = Club::get_route(tag);
         let mut club = fetch_route::<Club>(client, &route)?;
-        club.members.tag = tag.to_owned();
+        club.members.tag = club.tag.clone();
         Ok(club)
     }
 
     /// (Async) Fetches a club from its tag.
+    ///
+    /// # Errors
+    ///
+    /// This function may error:
+    /// - While requesting (will return an [`Error::Request`]);
+    /// - After receiving a bad status code (API or other error - returns an [`Error::Status`]);
+    /// - After a ratelimit is indicated by the API, while also specifying when it is lifted ([`Error::Ratelimited`]);
+    /// - While parsing incoming JSON (will return an [`Error::Json`]).
+    ///
+    /// (All of those, of course, wrapped inside an `Err`.)
+    ///
+    /// # Examples
+    ///
+    /// ```rust,ignore
+    /// use brawl_api::{Client, Club, traits::*};
+    ///
+    /// # async fn main() -> Result<(), Box<dyn ::std::error::Error>> {
+    /// let my_client = Client::new("my auth token");
+    /// let club = Club::a_fetch(&my_client, "#CLUBTAGHERE").await?;
+    /// // now the data for the given club is available for use.
+    ///
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// [`Error::Request`]: error/enum.Error.html#variant.Request
+    /// [`Error::Status`]: error/enum.Error.html#variant.Status
+    /// [`Error::Ratelimited`]: error/enum.Error.html#variant.Ratelimited
+    /// [`Error::Json`]: error/enum.Error.html#variant.Json
     #[cfg(feature="async")]
     async fn a_fetch(client: &Client, tag: &'async_trait str) -> Result<Club>
         where Self: 'async_trait,
@@ -177,7 +235,7 @@ impl PropFetchable for Club {
     {
         let route = Club::get_route(tag);
         let mut club = a_fetch_route::<Club>(client, &route).await?;
-        club.members.tag = tag.to_owned();
+        club.members.tag = club.tag.clone();
         Ok(club)
     }
 }
@@ -185,10 +243,16 @@ impl PropFetchable for Club {
 #[cfg_attr(feature = "async", async_trait)]
 #[cfg(feature = "players")]
 impl FetchFrom<PlayerClub> for Club {
+    /// (Sync) Fetches a `Club` using data from a [`PlayerClub`] object.
+    ///
+    /// [`PlayerClub`]: ../../players/player/struct.PlayerClub.html
     fn fetch_from(client: &Client, p_club: &PlayerClub) -> Result<Club> {
         Club::fetch(client, &p_club.tag)
     }
 
+    /// (Async) Fetches a `Club` using data from a [`PlayerClub`] object.
+    ///
+    /// [`PlayerClub`]: ../../players/player/struct.PlayerClub.html
     #[cfg(feature = "async")]
     async fn a_fetch_from(client: &Client, p_club: &PlayerClub) -> Result<Club> {
         Club::a_fetch(client, &p_club.tag).await
@@ -229,6 +293,18 @@ pub enum ClubMemberRole {
 }
 
 impl Display for ClubMemberRole {
+    /// Writes this `ClubMemberRole` variant's name.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use brawl_api::ClubMemberRole;
+    ///
+    /// assert_eq!(
+    ///     format!("{}", ClubMemberRole::Senior),
+    ///     String::from("Senior")
+    /// );
+    /// ```
     fn fmt(&self, f: &mut Formatter<'_>) -> ::std::fmt::Result {
         write!(
             f, "{}",
@@ -558,7 +634,7 @@ pub mod members {
         /// # fn main() -> Result<(), Box<dyn ::std::error::Error>> {
         /// let my_client = Client::new("my auth token");
         /// let club_members = ClubMembers::fetch(&my_client, "#CLUBTAGHERE")?;
-        /// // now you have the members of the club with the given tag.
+        /// // now the members of the club with the given tag are available in the code
         ///
         /// # Ok(())
         /// # }
@@ -598,7 +674,7 @@ pub mod members {
         /// # async fn main() -> Result<(), Box<dyn ::std::error::Error>> {
         /// let my_client = Client::new("my auth token");
         /// let club_members = ClubMembers::a_fetch(&my_client, "#CLUBTAGHERE").await?;
-        /// // now you have the members of the club with the given tag.
+        /// // now the members of the club with the given tag are available in the code
         ///
         /// # Ok(())
         /// # }
