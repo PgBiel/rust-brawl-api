@@ -281,7 +281,7 @@ pub struct PlayerRanking {
 
     /// The player's name color. Defaults to `0xffffff` (white).
     #[serde(default = "oxffffff_default")]
-    pub name_color: usize,
+    pub name_color: u64,
 }
 
 /// Represents the club in a player's ranking (a [`PlayerRanking`] object). Since the only data

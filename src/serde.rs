@@ -3,15 +3,16 @@ use std::str::FromStr;
 use std::fmt::Display;
 use std::result::Result as StdResult;  // in order to not confuse with the library's Result
 use serde::{self, Deserializer, Deserialize, Serialize, Serializer};
-use num_traits::PrimInt;
+use num_traits::{PrimInt, Num as NTraitNum};
 use std::ops::{Deref, DerefMut};
 
 // Credit to `serde-aux` crate
 pub(crate) fn deserialize_number_from_string<'de, T, D>(deserializer: D) -> Result<T, D::Error>
     where
         D: Deserializer<'de>,
-        T: FromStr + serde::Deserialize<'de>,
+        T: FromStr + serde::Deserialize<'de> + PrimInt,
         <T as FromStr>::Err: Display,
+        <T as NTraitNum>::FromStrRadixErr: Display
 {
     #[derive(Deserialize)]
     #[serde(untagged)]
@@ -21,7 +22,15 @@ pub(crate) fn deserialize_number_from_string<'de, T, D>(deserializer: D) -> Resu
     }
 
     match StringOrInt::<T>::deserialize(deserializer)? {
-        StringOrInt::String(s) => s.parse::<T>().map_err(serde::de::Error::custom),
+        StringOrInt::String(s) => {
+            if s.starts_with("0x") {  // hexadecimal str
+                T::from_str_radix(s.trim_start_matches("0x"), 16)
+                    .map_err(serde::de::Error::custom)
+            } else {
+                s.parse::<T>()
+                    .map_err(serde::de::Error::custom)
+            }
+        },
         StringOrInt::Number(i) => Ok(i),
     }
 }
@@ -76,5 +85,6 @@ pub(crate) fn one_default<T>() -> T
 /// Obtains 0xffffff for an arbitrary number type.
 pub(crate) fn oxffffff_default<T>() -> T
     where T: PrimInt + FromStr,
-          <T as FromStr>::Err: ::std::fmt::Debug
-{ "0xffffff".parse().unwrap() }
+          <T as FromStr>::Err: ::std::fmt::Debug,
+          <T as NTraitNum>::FromStrRadixErr: ::std::fmt::Debug
+{ T::from_str_radix("ffffff", 16).unwrap() }

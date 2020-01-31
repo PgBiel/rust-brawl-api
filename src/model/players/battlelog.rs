@@ -272,6 +272,7 @@ pub struct Battle {
 
     /// Data about the battle itself and its outcome.
     #[serde(default)]
+    #[serde(rename = "battle")]
     pub result: BattleResultInfo,
 }
 
@@ -561,5 +562,217 @@ impl Default for BattleBrawler {
             power: 1,
             trophies: 0,
         }
+    }
+}
+
+///////////////////////////////////   tests   ///////////////////////////////////
+
+#[cfg(test)]
+mod tests {
+    use serde_json;
+
+    /// Tests for battlelog deserialization from API-provided JSON.
+    #[test]
+    fn battlelog_deser() -> Result<(), Box<dyn ::std::error::Error>> {
+        use crate::model::players::battlelog::*;
+
+        let battlelog_json_s = r##"{
+  "items": [
+    {
+      "battleTime": "20200131T003432.000Z",
+      "event": {
+        "id": 15000163,
+        "mode": "brawlBall",
+        "map": "Coarse Course"
+      },
+      "battle": {
+        "mode": "brawlBall",
+        "type": "ranked",
+        "result": "victory",
+        "duration": 96,
+        "trophyChange": 8,
+        "starPlayer": {
+          "tag": "#CCCCCCCC",
+          "name": "User",
+          "brawler": {
+            "id": 16000008,
+            "name": "NITA",
+            "power": 10,
+            "trophies": 500
+          }
+        },
+        "teams": [
+          [
+            {
+              "tag": "#CCCCCCCC",
+              "name": "User",
+              "brawler": {
+                "id": 16000008,
+                "name": "NITA",
+                "power": 10,
+                "trophies": 500
+              }
+            },
+            {
+              "tag": "#RRRAAALLL",
+              "name": "Other User",
+              "brawler": {
+                "id": 16000001,
+                "name": "COLT",
+                "power": 8,
+                "trophies": 510
+              }
+            },
+            {
+              "tag": "#GGGGGGGGG",
+              "name": "Another User",
+              "brawler": {
+                "id": 16000018,
+                "name": "DARRYL",
+                "power": 10,
+                "trophies": 520
+              }
+            }
+          ],
+          [
+            {
+              "tag": "#777777777",
+              "name": "User User User",
+              "brawler": {
+                "id": 16000032,
+                "name": "MAX",
+                "power": 10,
+                "trophies": 500
+              }
+            },
+            {
+              "tag": "#SUVSUVSUV",
+              "name": "User.User?!",
+              "brawler": {
+                "id": 16000024,
+                "name": "ROSA",
+                "power": 9,
+                "trophies": 400
+              }
+            },
+            {
+              "tag": "#QCPJ09J",
+              "name": "пользователь",
+              "brawler": {
+                "id": 16000028,
+                "name": "SANDY",
+                "power": 10,
+                "trophies": 450
+              }
+            }
+          ]
+        ]
+      }
+    }
+  ]
+}"##;
+        let battle_log = serde_json::from_str::<BattleLog>(battlelog_json_s)?;
+
+        assert_eq!(
+            battle_log,
+            BattleLog {
+                items: vec![
+                    Battle {
+                        battle_time: TimeLike(String::from("20200131T003432.000Z")),
+                        event: BattleEvent {
+                            id: 15000163,
+                            mode: String::from("brawlBall"),
+                            map: String::from("Coarse Course")
+                        },
+                        result: BattleResultInfo {
+                            mode: String::from("brawlBall"),
+                            battle_type: String::from("ranked"),
+                            result: Some(BattleOutcome::Victory),
+                            duration: 96,
+                            trophy_change: 8,
+                            star_player: Some(BattlePlayer {
+                                tag: String::from("#CCCCCCCC"),
+                                name: String::from("User"),
+                                brawler: BattleBrawler {
+                                    id: 16000008,
+                                    name: String::from("NITA"),
+                                    power: 10,
+                                    trophies: 500
+                                }
+                            }),
+                            teams: Some([
+                                vec![
+                                    BattlePlayer {
+                                        tag: String::from("#CCCCCCCC"),
+                                        name: String::from("User"),
+                                        brawler: BattleBrawler {
+                                            id: 16000008,
+                                            name: String::from("NITA"),
+                                            power: 10,
+                                            trophies: 500
+                                        }
+                                    },
+                                    BattlePlayer {
+                                        tag: String::from("#RRRAAALLL"),
+                                        name: String::from("Other User"),
+                                        brawler: BattleBrawler {
+                                            id: 16000001,
+                                            name: String::from("COLT"),
+                                            power: 8,
+                                            trophies: 510
+                                        }
+                                    },
+                                    BattlePlayer {
+                                        tag: String::from("#GGGGGGGGG"),
+                                        name: String::from("Another User"),
+                                        brawler: BattleBrawler {
+                                            id: 16000018,
+                                            name: String::from("DARRYL"),
+                                            power: 10,
+                                            trophies: 520
+                                        }
+                                    }
+                                ],
+                                vec![
+                                    BattlePlayer {
+                                        tag: String::from("#777777777"),
+                                        name: String::from("User User User"),
+                                        brawler: BattleBrawler {
+                                            id: 16000032,
+                                            name: String::from("MAX"),
+                                            power: 10,
+                                            trophies: 500
+                                        }
+                                    },
+                                    BattlePlayer {
+                                        tag: String::from("#SUVSUVSUV"),
+                                        name: String::from("User.User?!"),
+                                        brawler: BattleBrawler {
+                                            id: 16000024,
+                                            name: String::from("ROSA"),
+                                            power: 9,
+                                            trophies: 400
+                                        }
+                                    },
+                                    BattlePlayer {
+                                        tag: String::from("#QCPJ09J"),
+                                        name: String::from("пользователь"),
+                                        brawler: BattleBrawler {
+                                            id: 16000028,
+                                            name: String::from("SANDY"),
+                                            power: 10,
+                                            trophies: 450
+                                        }
+                                    }
+                                ]
+                            ]), ..BattleResultInfo::default()
+                        }
+                    }
+                ],
+                tag: String::from(""),
+            }
+        );
+
+        Ok(())
     }
 }

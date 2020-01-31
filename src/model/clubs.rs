@@ -16,7 +16,8 @@ use crate::util::a_fetch_route;
 use super::players::PlayerClub;
 use crate::http::Client;
 use crate::serde::{
-    serialize_smt_pointer, deserialize_number_from_string, deserialize_default_smt_pointer
+    serialize_smt_pointer, deserialize_number_from_string, deserialize_default_smt_pointer,
+    oxffffff_default,
 };
 use crate::http::routes::Route;
 use crate::util::{auto_hashtag, fetch_route};
@@ -110,8 +111,6 @@ pub struct Club {
     #[serde(default)]
     pub club_type: ClubType
 }
-
-fn oxffffff_default_usize() -> usize { 0xff_ff_ff }
 
 impl Default for Club {
 
@@ -379,6 +378,7 @@ impl Default for ClubMemberRole {
 ///
 /// [`Player::fetch_from`]: ../players/player/struct.Player.html#method.fetch_from
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ClubMember {
 
     /// The member's tag.
@@ -401,9 +401,9 @@ pub struct ClubMember {
 
     /// The member's name color, as an integer (Default is 0xffffff = 16777215 - this is used
     /// when the data is not available).
-    #[serde(default = "oxffffff_default_usize")]
+    #[serde(default = "oxffffff_default")]
     #[serde(deserialize_with = "deserialize_number_from_string")]  // parse num
-    pub name_color: usize
+    pub name_color: u64
 }
 
 impl PartialOrd for ClubMember {
@@ -716,6 +716,246 @@ pub mod members {
         fn default() -> ClubMembers {
             ClubMembers { tag: String::from(""), items: vec![] }
         }
+    }
+}
+
+///////////////////////////////////   tests   ///////////////////////////////////
+
+#[cfg(test)]
+mod tests {
+    use std::result::Result as StdResult;
+    use super::*;
+    use crate::error::Error as BrawlError;
+    use serde_json;
+
+    /// Tests for club deserialization from API-provided JSON.
+    #[test]
+    fn club_deser() -> StdResult<(), Box<dyn ::std::error::Error>> {
+        let club_json_s = r##"{
+  "tag": "#GGGGGGG",
+  "name": "Club",
+  "description": "Brawl Stars club",
+  "type": "open",
+  "requiredTrophies": 1000,
+  "trophies": 60000,
+  "members": [
+    {
+      "tag": "#PPP200JJJ",
+      "name": "Member #1",
+      "nameColor": "0xffff8afb",
+      "role": "vicePresident",
+      "trophies": 500
+    },
+    {
+      "tag": "#CCCCCCCCCC",
+      "name": "Member #2",
+      "nameColor": "0xff1ba5f5",
+      "role": "president",
+      "trophies": 200
+    },
+    {
+      "tag": "#VVVVVVVVV",
+      "name": "Member #3",
+      "nameColor": "0xffffff",
+      "role": "member",
+      "trophies": 8500
+    },
+    {
+      "tag": "#9999999999",
+      "name": "Member #4",
+      "nameColor": "0xff4ddba2",
+      "role": "member",
+      "trophies": 20000
+    },
+    {
+      "tag": "#UUUUUU888",
+      "name": "Member #5",
+      "nameColor": "0xff1ba5f5",
+      "role": "senior",
+      "trophies": 4500
+    },
+    {
+      "tag": "#JJJJJJJJJ",
+      "name": "Member ██▬█",
+      "nameColor": "0xff1ba5f5",
+      "role": "member",
+      "trophies": 26300
+    }
+  ]
+}"##;
+
+        let club: Club = serde_json::from_str::<Club>(club_json_s)
+            .map_err(BrawlError::Json)?;
+
+        assert_eq!(
+            club,
+            Club {
+                tag: String::from("#GGGGGGG"),
+                name: String::from("Club"),
+                description: Some(String::from("Brawl Stars club")),
+                club_type: ClubType::Open,
+                required_trophies: 1000,
+                trophies: 60000,
+                members: ClubMembers {
+                    items: vec![
+                        ClubMember {
+                            tag: String::from("#PPP200JJJ"),
+                            name: String::from("Member #1"),
+                            name_color: 0xffff8afb,
+                            role: ClubMemberRole::VicePresident,
+                            trophies: 500
+                        },
+                        ClubMember {
+                            tag: String::from("#CCCCCCCCCC"),
+                            name: String::from("Member #2"),
+                            name_color: 0xff1ba5f5,
+                            role: ClubMemberRole::President,
+                            trophies: 200
+                        },
+                        ClubMember {
+                            tag: String::from("#VVVVVVVVV"),
+                            name: String::from("Member #3"),
+                            name_color: 0xffffff,
+                            role: ClubMemberRole::Member,
+                            trophies: 8500
+                        },
+                        ClubMember {
+                            tag: String::from("#9999999999"),
+                            name: String::from("Member #4"),
+                            name_color: 0xff4ddba2,
+                            role: ClubMemberRole::Member,
+                            trophies: 20000
+                        },
+                        ClubMember {
+                            tag: String::from("#UUUUUU888"),
+                            name: String::from("Member #5"),
+                            name_color: 0xff1ba5f5,
+                            role: ClubMemberRole::Senior,
+                            trophies: 4500
+                        },
+                        ClubMember {
+                            tag: String::from("#JJJJJJJJJ"),
+                            name: String::from("Member ██▬█"),
+                            name_color: 0xff1ba5f5,
+                            role: ClubMemberRole::Member,
+                            trophies: 26300
+                        }
+                    ],
+                    ..ClubMembers::default()
+                }
+            }
+        );
+
+        Ok(())
+    }
+
+    /// Tests for ClubMembers deserialization from API-provided JSON.
+    #[test]
+    fn club_members_deser() -> StdResult<(), Box<dyn ::std::error::Error>> {
+        let cm_json_s = r##"{
+  "items": [
+    {
+      "tag": "#PPP200JJJ",
+      "name": "Member #1",
+      "nameColor": "0xffff8afb",
+      "role": "vicePresident",
+      "trophies": 500
+    },
+    {
+      "tag": "#CCCCCCCCCC",
+      "name": "Member #2",
+      "nameColor": "0xff1ba5f5",
+      "role": "president",
+      "trophies": 200
+    },
+    {
+      "tag": "#VVVVVVVVV",
+      "name": "Member #3",
+      "nameColor": "0xffffff",
+      "role": "member",
+      "trophies": 8500
+    },
+    {
+      "tag": "#9999999999",
+      "name": "Member #4",
+      "nameColor": "0xff4ddba2",
+      "role": "member",
+      "trophies": 20000
+    },
+    {
+      "tag": "#UUUUUU888",
+      "name": "Member #5",
+      "nameColor": "0xff1ba5f5",
+      "role": "senior",
+      "trophies": 4500
+    },
+    {
+      "tag": "#JJJJJJJJJ",
+      "name": "Member ██▬█",
+      "nameColor": "0xff1ba5f5",
+      "role": "member",
+      "trophies": 26300
+    }
+  ],
+  "paging": {
+    "cursors": {}
+  }
+}"##;
+        let club_members: ClubMembers = serde_json::from_str::<ClubMembers>(cm_json_s)
+            .map_err(BrawlError::Json)?;
+
+        assert_eq!(
+            club_members,
+            ClubMembers {
+                items: vec![
+                    ClubMember {
+                        tag: String::from("#PPP200JJJ"),
+                        name: String::from("Member #1"),
+                        name_color: 0xffff8afb,
+                        role: ClubMemberRole::VicePresident,
+                        trophies: 500
+                    },
+                    ClubMember {
+                        tag: String::from("#CCCCCCCCCC"),
+                        name: String::from("Member #2"),
+                        name_color: 0xff1ba5f5,
+                        role: ClubMemberRole::President,
+                        trophies: 200
+                    },
+                    ClubMember {
+                        tag: String::from("#VVVVVVVVV"),
+                        name: String::from("Member #3"),
+                        name_color: 0xffffff,
+                        role: ClubMemberRole::Member,
+                        trophies: 8500
+                    },
+                    ClubMember {
+                        tag: String::from("#9999999999"),
+                        name: String::from("Member #4"),
+                        name_color: 0xff4ddba2,
+                        role: ClubMemberRole::Member,
+                        trophies: 20000
+                    },
+                    ClubMember {
+                        tag: String::from("#UUUUUU888"),
+                        name: String::from("Member #5"),
+                        name_color: 0xff1ba5f5,
+                        role: ClubMemberRole::Senior,
+                        trophies: 4500
+                    },
+                    ClubMember {
+                        tag: String::from("#JJJJJJJJJ"),
+                        name: String::from("Member ██▬█"),
+                        name_color: 0xff1ba5f5,
+                        role: ClubMemberRole::Member,
+                        trophies: 26300
+                    }
+                ],
+                ..ClubMembers::default()
+            }
+        );
+
+        Ok(())
     }
 }
 

@@ -112,7 +112,7 @@ pub struct Player {
     /// when the data is not available).
     #[serde(default = "oxffffff_default")]
     #[serde(deserialize_with = "deserialize_number_from_string")]  // parse num
-    pub name_color: usize,
+    pub name_color: u64,
 }
 fn false_default() -> bool { false }
 
@@ -498,3 +498,126 @@ impl Default for PlayerBrawlerStat {
         }
     }
 }
+
+///////////////////////////////////   tests   ///////////////////////////////////
+
+#[cfg(test)]
+mod tests {
+    use std::result::Result as StdResult;
+    use super::{Player, PlayerClub, PlayerBrawlerStat, StarPower};
+    use crate::error::Error as BrawlError;
+    use serde_json;
+
+    /// Tests for player deserialization from API-provided JSON.
+    #[test]
+    fn players_deser() -> StdResult<(), Box<dyn ::std::error::Error>> {
+        let player_json_s = r##"{
+  "tag": "#CCCCCC",
+  "name": "User",
+  "nameColor": "0xff1ba5f5",
+  "trophies": 13370,
+  "highestTrophies": 30000,
+  "powerPlayPoints": 200,
+  "highestPowerPlayPoints": 900,
+  "expLevel": 100,
+  "expPoints": 70000,
+  "isQualifiedFromChampionshipChallenge": false,
+  "3vs3Victories": 3333,
+  "soloVictories": 999,
+  "duoVictories": 333,
+  "bestRoboRumbleTime": 350,
+  "bestTimeAsBigBrawler": 250,
+  "club": {
+    "tag": "#888888",
+    "name": "Club"
+  },
+  "brawlers": [
+    {
+      "id": 16000000,
+      "name": "SHELLY",
+      "power": 9,
+      "rank": 20,
+      "trophies": 500,
+      "highestTrophies": 549,
+      "starPowers": []
+    },
+    {
+      "id": 16000001,
+      "name": "COLT",
+      "power": 10,
+      "rank": 18,
+      "trophies": 420,
+      "highestTrophies": 440,
+      "starPowers": [
+        {
+          "id": 23000138,
+          "name": "Magnum Special"
+        },
+        {
+          "id": 23000077,
+          "name": "Slick Boots"
+        }
+      ]
+    }
+  ]
+}"##;
+        let player: Player = serde_json::from_str::<Player>(player_json_s)
+            .map_err(BrawlError::Json)?;
+
+        assert_eq!(
+            player,
+            Player {
+                tag: String::from("#CCCCCC"),
+                name: String::from("User"),
+                name_color: 0xff1ba5f5,
+                trophies: 13370,
+                highest_trophies: 30000,
+                power_play_points: 200,
+                highest_power_play_points: 900,
+                exp_level: 100,
+                exp_points: 70000,
+                is_qualified_from_championship_challenge: false,
+                tvt_victories: 3333,
+                solo_victories: 999,
+                duo_victories: 333,
+                best_robo_rumble_time: 350,
+                best_time_as_big_brawler: 250,
+                club: Some(PlayerClub {
+                    tag: String::from("#888888"),
+                    name: String::from("Club")
+                }),
+                brawlers: vec![
+                    PlayerBrawlerStat {
+                        id: 16000000,
+                        name: String::from("SHELLY"),
+                        power: 9,
+                        rank: 20,
+                        trophies: 500,
+                        highest_trophies: 549,
+                        star_powers: vec![]
+                    },
+                    PlayerBrawlerStat {
+                        id: 16000001,
+                        name: String::from("COLT"),
+                        power: 10,
+                        rank: 18,
+                        trophies: 420,
+                        highest_trophies: 440,
+                        star_powers: vec![
+                            StarPower {
+                                id: 23000138,
+                                name: String::from("Magnum Special")
+                            },
+                            StarPower {
+                                id: 23000077,
+                                name: String::from("Slick Boots")
+                            }
+                        ]
+                    },
+                ]
+            }
+        );
+        Ok(())
+    }
+}
+
