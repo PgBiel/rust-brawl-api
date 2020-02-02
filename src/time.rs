@@ -108,3 +108,27 @@ pub mod _impls {  // public so its implementations can be accessed
 
 #[cfg(feature = "datetime")]
 pub use _impls::*;
+
+///////////////////////////////////   tests   ///////////////////////////////////
+
+#[cfg(test)]
+mod tests {
+    use serde_json;
+    use super::TimeLike;
+
+    /// Tests TimeLike to DateTime<Utc> conversion.
+    #[test]
+    #[cfg(feature = "chrono")]
+    fn timelike_to_datetime_convert() -> Result<(), Box<dyn ::std::error::Error>> {
+        use chrono::prelude::*;
+        let time_str = "20200129T042143.000Z";
+        let time = TimeLike(String::from(time_str));
+
+        let dt: DateTime<Utc> = Utc
+            .ymd(2020, 01, 29).and_hms(04, 21, 43);
+
+        assert_eq!(time.parse()?, dt);
+
+        Ok(())
+    }
+}
