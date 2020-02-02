@@ -3,7 +3,7 @@
 
 use serde::{self, Serialize, Deserialize};
 use crate::traits::{PropLimRouteable, PropLimFetchable};
-use crate::serde::{one_default, oxffffff_default};
+use crate::serde::{one_default, oxffffff_default, deserialize_number_from_string};
 use std::ops::{Deref, DerefMut};
 use crate::util::fetch_route;
 use crate::error::Result;
@@ -281,6 +281,7 @@ pub struct PlayerRanking {
 
     /// The player's name color. Defaults to `0xffffff` (white).
     #[serde(default = "oxffffff_default")]
+    #[serde(deserialize_with = "deserialize_number_from_string")]
     pub name_color: u64,
 }
 
@@ -327,4 +328,118 @@ impl Default for PlayerRankingClub {
     }
 }
 
+///////////////////////////////////   tests   ///////////////////////////////////
 
+#[cfg(test)]
+mod tests {
+    use serde_json;
+    use super::{PlayerLeaderboard, PlayerRanking, PlayerRankingClub};
+    use crate::error::Error;
+
+    /// Tests for PlayerLeaderboard deserialization from API-provided JSON.
+    #[test]
+    fn rankings_players_deser() -> Result<(), Box<dyn ::std::error::Error>> {
+
+        let rp_json_s = r##"{
+  "items": [
+    {
+      "tag": "#AAAAAAAAA",
+      "name": "Player",
+      "nameColor": "0xfff05637",
+      "trophies": 30000,
+      "rank": 1,
+      "club": {
+        "name": "Scary Club"
+      }
+    },
+    {
+      "tag": "#EEEEEEE",
+      "name": "Also Player",
+      "nameColor": "0xffa2e3fe",
+      "trophies": 25000,
+      "rank": 2,
+      "club": {
+        "name": "Another Club"
+      }
+    },
+    {
+      "tag": "#QQQQQQQ",
+      "name": "Youtuber",
+      "nameColor": "0xfff05637",
+      "trophies": 23000,
+      "rank": 3,
+      "club": {
+        "name": "Different Club"
+      }
+    },
+    {
+      "tag": "#55555553Q",
+      "name": "Not a valid player",
+      "nameColor": "0xfff9cf08",
+      "trophies": 20000,
+      "rank": 4,
+      "club": {
+        "name": "Different Club"
+      }
+    }
+  ],
+
+  "paging": {
+    "cursors": {}
+  }
+}"##;
+        
+        let p_leaders = serde_json::from_str::<PlayerLeaderboard>(rp_json_s)
+            .map_err(Error::Json)?;
+
+        assert_eq!(
+            p_leaders,
+            PlayerLeaderboard {
+                items: vec![
+                    PlayerRanking {
+                        tag: String::from("#AAAAAAAAA"),
+                        name: String::from("Player"),
+                        name_color: 0xfff05637,
+                        trophies: 30000,
+                        rank: 1,
+                        club: PlayerRankingClub {
+                            name: String::from("Scary Club")
+                        }
+                    },
+                    PlayerRanking {
+                        tag: String::from("#EEEEEEE"),
+                        name: String::from("Also Player"),
+                        name_color: 0xffa2e3fe,
+                        trophies: 25000,
+                        rank: 2,
+                        club: PlayerRankingClub {
+                            name: String::from("Another Club")
+                        }
+                    },
+                    PlayerRanking {
+                        tag: String::from("#QQQQQQQ"),
+                        name: String::from("Youtuber"),
+                        name_color: 0xfff05637,
+                        trophies: 23000,
+                        rank: 3,
+                        club: PlayerRankingClub {
+                            name: String::from("Different Club")
+                        }
+                    },
+                    PlayerRanking {
+                        tag: String::from("#55555553Q"),
+                        name: String::from("Not a valid player"),
+                        name_color: 0xfff9cf08,
+                        trophies: 20000,
+                        rank: 4,
+                        club: PlayerRankingClub {
+                            name: String::from("Different Club")
+                        }
+                    }
+                ]
+            }
+        );
+        
+        Ok(())
+    }
+}

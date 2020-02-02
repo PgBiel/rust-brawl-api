@@ -417,3 +417,193 @@ impl FetchFrom<Brawlers> for Brawler {
         Brawler::a_fetch(client, b_brawler.to_owned() as usize).await
     }
 }
+
+///////////////////////////////////   tests   ///////////////////////////////////
+
+#[cfg(test)]
+mod tests {
+    use serde_json;
+    use super::{BrawlerList, Brawler};
+    use super::super::common::StarPower;
+    use crate::error::Error;
+
+    /// Tests for Brawlers deserialization from API-provided JSON.
+    #[test]
+    fn brawlers_deser() -> Result<(), Box<dyn ::std::error::Error>> {
+
+        let brawlers_json_s = r##"{
+  "items": [
+    {
+      "id": 16000000,
+      "name": "SHELLY",
+      "starPowers": [
+        {
+          "id": 23000076,
+          "name": "Shell Shock"
+        },
+        {
+          "id": 23000135,
+          "name": "Band-Aid"
+        }
+      ]
+    },
+    {
+      "id": 16000001,
+      "name": "COLT",
+      "starPowers": [
+        {
+          "id": 23000077,
+          "name": "Slick Boots"
+        },
+        {
+          "id": 23000138,
+          "name": "Magnum Special"
+        }
+      ]
+    },
+    {
+      "id": 16000002,
+      "name": "BULL",
+      "starPowers": [
+        {
+          "id": 23000078,
+          "name": "Berserker"
+        },
+        {
+          "id": 23000137,
+          "name": "Tough Guy"
+        }
+      ]
+    },
+    {
+      "id": 16000003,
+      "name": "BROCK",
+      "starPowers": [
+        {
+          "id": 23000079,
+          "name": "Incendiary"
+        },
+        {
+          "id": 23000150,
+          "name": "Rocket No. Four"
+        }
+      ]
+    }
+  ]
+}"##;
+
+        let brawlers = serde_json::from_str::<BrawlerList>(brawlers_json_s)
+            .map_err(Error::Json)?;
+
+        assert_eq!(
+            brawlers,
+            
+            BrawlerList {
+              items: vec![
+                Brawler {
+                  id: 16000000,
+                  name: String::from("SHELLY"),
+                  star_powers: vec![
+                    StarPower {
+                      id: 23000076,
+                      name: String::from("Shell Shock")
+                    },
+                    StarPower {
+                      id: 23000135,
+                      name: String::from("Band-Aid")
+                    }
+                  ]
+                },
+                Brawler {
+                  id: 16000001,
+                  name: String::from("COLT"),
+                  star_powers: vec![
+                    StarPower {
+                      id: 23000077,
+                      name: String::from("Slick Boots")
+                    },
+                    StarPower {
+                      id: 23000138,
+                      name: String::from("Magnum Special")
+                    }
+                  ]
+                },
+                Brawler {
+                  id: 16000002,
+                  name: String::from("BULL"),
+                  star_powers: vec![
+                    StarPower {
+                      id: 23000078,
+                      name: String::from("Berserker")
+                    },
+                    StarPower {
+                      id: 23000137,
+                      name: String::from("Tough Guy")
+                    }
+                  ]
+                },
+                Brawler {
+                  id: 16000003,
+                  name: String::from("BROCK"),
+                  star_powers: vec![
+                    StarPower {
+                      id: 23000079,
+                      name: String::from("Incendiary")
+                    },
+                    StarPower {
+                      id: 23000150,
+                      name: String::from("Rocket No. Four")
+                    }
+                  ]
+                }
+              ]
+            }
+        );
+
+        Ok(())
+    }
+
+    /// Tests for Brawler deserialization from API-provided JSON.
+    #[test]
+    fn brawler_deser() -> Result<(), Box<dyn ::std::error::Error>> {
+
+        let brawler_json_s = r##"{
+  "id": 16000000,
+  "name": "SHELLY",
+  "starPowers": [
+    {
+      "id": 23000076,
+      "name": "Shell Shock"
+    },
+    {
+      "id": 23000135,
+      "name": "Band-Aid"
+    }
+  ]
+}"##;
+
+        let brawler = serde_json::from_str::<Brawler>(brawler_json_s)
+            .map_err(Error::Json)?;
+
+        assert_eq!(
+            brawler,
+
+            Brawler {
+                id: 16000000,
+                name: String::from("SHELLY"),
+                star_powers: vec![
+                    StarPower {
+                        id: 23000076,
+                        name: String::from("Shell Shock")
+                    },
+                    StarPower {
+                        id: 23000135,
+                        name: String::from("Band-Aid")
+                    }
+                ]
+            }
+        );
+
+        Ok(())
+    }
+}

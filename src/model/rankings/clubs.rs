@@ -371,3 +371,91 @@ impl Ord for ClubRanking {
         self.rank.cmp(&other.rank).reverse()
     }
 }
+
+///////////////////////////////////   tests   ///////////////////////////////////
+
+#[cfg(test)]
+mod tests {
+    use serde_json;
+    use super::{ClubLeaderboard, ClubRanking};
+    use crate::error::Error;
+
+    /// Tests for ClubLeaderboard deserialization from API-provided JSON.
+    #[test]
+    fn rankings_clubs_deser() -> Result<(), Box<dyn ::std::error::Error>> {
+
+        let rc_json_s = r##"{
+  "items": [
+    {
+      "tag": "#AAAAAAAAA",
+      "name": "Club",
+      "trophies": 30000,
+      "rank": 1,
+      "memberCount": 50
+    },
+    {
+      "tag": "#EEEEEEE",
+      "name": "Also Club",
+      "trophies": 25000,
+      "rank": 2,
+      "memberCount": 30
+    },
+    {
+      "tag": "#QQQQQQQ",
+      "name": "Clubby Club",
+      "trophies": 23000,
+      "rank": 3,
+      "memberCount": 25
+    },
+    {
+      "tag": "#55555553Q",
+      "name": "Not a valid club",
+      "trophies": 20000,
+      "rank": 4,
+      "memberCount": 10
+    }
+  ]
+}"##;
+
+        let c_leaders = serde_json::from_str::<ClubLeaderboard>(rc_json_s)
+            .map_err(Error::Json)?;
+
+        assert_eq!(
+            c_leaders,
+            ClubLeaderboard {
+                items: vec![
+                    ClubRanking {
+                        tag: String::from("#AAAAAAAAA"),
+                        name: String::from("Club"),
+                        member_count: 50,
+                        trophies: 30000,
+                        rank: 1,
+                    },
+                    ClubRanking {
+                        tag: String::from("#EEEEEEE"),
+                        name: String::from("Also Club"),
+                        member_count: 30,
+                        trophies: 25000,
+                        rank: 2,
+                    },
+                    ClubRanking {
+                        tag: String::from("#QQQQQQQ"),
+                        name: String::from("Clubby Club"),
+                        member_count: 25,
+                        trophies: 23000,
+                        rank: 3,
+                    },
+                    ClubRanking {
+                        tag: String::from("#55555553Q"),
+                        name: String::from("Not a valid club"),
+                        member_count: 10,
+                        trophies: 20000,
+                        rank: 4,
+                    }
+                ]
+            }
+        );
+
+        Ok(())
+    }
+}

@@ -416,11 +416,12 @@ pub struct BattleResultInfo {
     #[serde(default)]
     pub star_player: Option<BattlePlayer>,
 
-    /// If this was a match with teams, then this is an array with both teams of players
-    /// (as vectors).
+    /// If this was a match with teams, then this is a vector with both teams of players
+    /// (as vectors). Note that its length is usually 2 teams, but a vector is used for
+    /// future-proofing.
     /// Otherwise, `None`.
     #[serde(default)]
-    pub teams: Option<[Vec<BattlePlayer>; 2]>,
+    pub teams: Option<Vec<Vec<BattlePlayer>>>,
 
     /// If this was a solo match or a mode without teams, such as Showdown, then this is a vector
     /// with all the players in the match. Otherwise, `None`.
@@ -570,11 +571,14 @@ impl Default for BattleBrawler {
 #[cfg(test)]
 mod tests {
     use serde_json;
+    use crate::time::TimeLike;
+    use super::{
+        BattleLog, BattleBrawler, BattlePlayer, Battle, BattleResultInfo, BattleEvent, BattleOutcome
+    };
 
     /// Tests for battlelog deserialization from API-provided JSON.
     #[test]
     fn battlelog_deser() -> Result<(), Box<dyn ::std::error::Error>> {
-        use crate::model::players::battlelog::*;
 
         let battlelog_json_s = r##"{
   "items": [
@@ -700,7 +704,7 @@ mod tests {
                                     trophies: 500
                                 }
                             }),
-                            teams: Some([
+                            teams: Some(vec![
                                 vec![
                                     BattlePlayer {
                                         tag: String::from("#CCCCCCCC"),
