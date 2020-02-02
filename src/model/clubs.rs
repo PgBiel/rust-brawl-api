@@ -573,7 +573,7 @@ pub mod members {
         }
 
         fn get_route(tag: &str) -> Route {
-            Route::ClubMembers(tag.to_owned())
+            Route::ClubMembers(auto_hashtag(tag))
         }
     }
 

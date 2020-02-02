@@ -4,7 +4,7 @@
 use std::ops::{Deref, DerefMut};
 use crate::traits::{GetFetchProp, PropFetchable, FetchFrom};
 use crate::http::routes::Route;
-use crate::util::{fetch_route, a_fetch_route};
+use crate::util::{fetch_route, a_fetch_route, auto_hashtag};
 use serde::{self, Serialize, Deserialize};
 use crate::error::Result;
 use crate::serde::one_default;
@@ -105,7 +105,7 @@ impl GetFetchProp for BattleLog {
     }
 
     fn get_route(tag: &str) -> Route {
-        Route::PlayerBattlelogs(tag.to_owned())
+        Route::PlayerBattlelogs(auto_hashtag(tag))
     }
 }
 
@@ -376,6 +376,18 @@ impl ::std::fmt::Display for BattleOutcome {
 /// Represents the result of a battle in a [`Battle`] object, including details, outcome,
 /// players/teams etc.
 ///
+/// There are three general models of fields here:
+///
+/// - **Team modes** (Bounty, Gem Grab, Duo Showdown...): fields `mode`, `battle_type`, `duration`,
+/// `trophy_change`, `result`, `star_player`, `teams`
+/// - **Solo modes** (Solo Showdown): fields `mode`, `battle_type`, `duration`, `trophy_change`,
+/// `rank`, `players`
+/// - **Weekend events:** Depends on the event. Should always be there: `mode`, `duration`.
+///   - Here, `trophy_change` is always equal to 0.
+///   - **Boss fight:** `mode`, `duration`, `players`
+///   - **Big Brawler:** `mode`, `duration`, `result`, `star_player`, `teams` (needs testing!)
+///   - **Robo Rumble:** `mode`, `duration`, `players` (needs testing!)
+///
 /// [`Battle`]: struct.Battle.html
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -387,17 +399,21 @@ pub struct BattleResultInfo {
     pub mode: String,
 
     /// The type of battle (e.g. "ranked").
+    ///
+    /// If this is `None`, then this is likely a weekend event.
     #[serde(default)]
     #[serde(rename = "type")]
-    pub battle_type: String,
+    pub battle_type: Option<String>,
 
     /// The duration of this battle, in seconds.
     #[serde(default)]
     pub duration: usize,
 
     /// The difference in trophies applied to the player after the battle. E.g. -4 (lost 4 trophies)
+    ///
+    /// This is always 0 for weekend events and practice.
     #[serde(default)]
-    pub trophy_change: usize,
+    pub trophy_change: isize,
 
     /// If this was a solo mode match, then this is the player's final rank (1-10). Otherwise,
     /// `None`.
@@ -416,9 +432,9 @@ pub struct BattleResultInfo {
     #[serde(default)]
     pub star_player: Option<BattlePlayer>,
 
-    /// If this was a match with teams, then this is a vector with both teams of players
-    /// (as vectors). Note that its length is usually 2 teams, but a vector is used for
-    /// future-proofing.
+    /// If this was a match with teams, then this is a vector with all teams of players
+    /// (as vectors) - this can be the teams in a teamed mode such as Bounty, or the pairs in
+    /// Duo Showdown, for example.
     /// Otherwise, `None`.
     #[serde(default)]
     pub teams: Option<Vec<Vec<BattlePlayer>>>,
@@ -441,7 +457,7 @@ impl Default for BattleResultInfo {
     ///     BattleResultInfo::default(),
     ///     BattleResultInfo {
     ///         mode: String::from(""),
-    ///         battle_type: String::from(""),
+    ///         battle_type: Some(String::from("")),
     ///         duration: 0,
     ///         trophy_change: 0,
     ///         rank: None,
@@ -455,7 +471,7 @@ impl Default for BattleResultInfo {
     fn default() -> BattleResultInfo {
         BattleResultInfo {
             mode: String::from(""),
-            battle_type: String::from(""),
+            battle_type: Some(String::from("")),
             duration: 0,
             trophy_change: 0,
             rank: None,
@@ -690,7 +706,7 @@ mod tests {
                         },
                         result: BattleResultInfo {
                             mode: String::from("brawlBall"),
-                            battle_type: String::from("ranked"),
+                            battle_type: Some(String::from("ranked")),
                             result: Some(BattleOutcome::Victory),
                             duration: 96,
                             trophy_change: 8,

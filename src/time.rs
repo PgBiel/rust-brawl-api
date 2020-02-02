@@ -113,7 +113,6 @@ pub use _impls::*;
 
 #[cfg(test)]
 mod tests {
-    use serde_json;
     use super::TimeLike;
 
     /// Tests TimeLike to DateTime<Utc> conversion.

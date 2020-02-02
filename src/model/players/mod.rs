@@ -5,3 +5,4 @@ pub mod player;
 pub use player::*;
 
 pub mod battlelog;
+pub use battlelog::*;
