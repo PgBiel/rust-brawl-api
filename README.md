@@ -13,10 +13,10 @@ For example:
 use brawl_api::prelude::*;
 
 fn main() -> Result<(), Box<dyn ::std::error::Error>> {
-    let client = Client("MY AUTH TOKEN");
+    let client = Client::new("MYAUTHTOKEN");
     let player = Player::fetch(&client, "#PLAYER_TAG_TO_FETCH")?;
     // now data for player with the given tag is available.
-    // see all models in the documentation.
+    // See all models in the documentation.
 }
 ```
 
