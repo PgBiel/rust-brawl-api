@@ -1,6 +1,9 @@
 //! Contains the [`TimeLike`] struct, used to indicate strings that contain timestamps which can
 //! be parsed using [`TimeLike.parse`] (if the `chrono` feature is enabled, otherwise the method
 //! is not implemented).
+//!
+//! [`TimeLike`]: time/struct.TimeLike.html
+//! [`TimeLike.parse`]: time/struct.TimeLike.html#method.parse
 
 use serde::{self, Serialize, Deserialize};
 use std::fmt::Display;
